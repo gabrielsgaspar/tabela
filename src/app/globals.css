@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* ---- Token definitions (Tailwind v4 @theme) ---- */
+@theme {
+  /* Colors */
+  --color-paper:    #FAF7F2;
+  --color-paper2:   #F2EEE5;
+  --color-ink:      #111111;
+  --color-ink2:     #3A3A38;
+  --color-ink3:     #6B6B66;
+  --color-rule:     rgba(26,26,24,0.12);
+  --color-rule2:    rgba(26,26,24,0.22);
+  --color-pitch:    #0F3D2E;
+  --color-pitch2:   #1A5A45;
+  --color-mustard:  #D4A24C;
+  --color-mustard2: #B5862E;
+  --color-crimson:  #B33A2E;
+
+  /* Fonts — loaded via next/font/google in layout.tsx */
+  --font-family-serif: var(--font-newsreader), Georgia, serif;
+  --font-family-sans:  var(--font-dm-sans), system-ui, sans-serif;
+  --font-family-mono:  var(--font-jetbrains-mono), ui-monospace, monospace;
+
+  /* Max-width */
+  --max-width-content: 1240px;
+
+  /* Letter spacing */
+  --letter-spacing-tightish: -0.01em;
+  --letter-spacing-tighter2: -0.02em;
+  --letter-spacing-tighter3: -0.03em;
+}
+
+/* ---- Base ---- */
+html { scrollbar-gutter: stable; }
+html, body { background: var(--color-paper); color: var(--color-ink); }
+body { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+button { font-family: inherit; }
+::selection { background: rgba(212,162,76,.35); color: var(--color-ink); }
+:focus-visible { outline: 2px solid var(--color-pitch); outline-offset: 2px; border-radius: 4px; }
+
+/* ---- Typography classes ---- */
+/* These are not replicated as Tailwind utilities — used as className="display" etc. */
+.display {
+  font-family: var(--font-family-serif);
+  font-optical-sizing: auto;
+  font-variation-settings: "opsz" 72;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+.h-serif {
+  font-family: var(--font-family-serif);
+  font-optical-sizing: auto;
+  font-variation-settings: "opsz" 48;
+  letter-spacing: -0.015em;
+}
+.num {
+  font-family: var(--font-family-mono);
+  font-feature-settings: "tnum","zero";
+}
+
+/* ---- Rules ---- */
+.rule-t  { border-top:    1px solid var(--color-rule); }
+.rule-b  { border-bottom: 1px solid var(--color-rule); }
+.rule-l  { border-left:   1px solid var(--color-rule); }
+.rule-r  { border-right:  1px solid var(--color-rule); }
+.rule-strong-b { border-bottom: 1px solid var(--color-rule2); }
+.rule-thick-b  { border-bottom: 2px solid var(--color-ink); }
+
+/* ---- Give-and-go mark ---- */
+.gng-mark { display: inline-flex; align-items: center; gap: 4px; }
+.gng-dot  { width: 6px; height: 6px; border-radius: 999px; background: var(--color-pitch); }
+.gng-line { width: 14px; height: 1px; background: var(--color-pitch); }
+
+/* ---- Pass-link underline ---- */
+.pass-link { position: relative; }
+.pass-link::after {
+  content: ""; position: absolute; left: 0; right: 100%; bottom: -2px;
+  height: 1px; background: currentColor;
+  transition: right 280ms cubic-bezier(.2,.7,.2,1);
+}
+.pass-link:hover::after { right: 0; }
+
+/* ---- Live dot ---- */
+@keyframes livepulse {
+  0%   { box-shadow: 0 0 0 0 rgba(212,162,76,.55); }
+  70%  { box-shadow: 0 0 0 8px rgba(212,162,76,0); }
+  100% { box-shadow: 0 0 0 0 rgba(212,162,76,0); }
+}
+.live-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--color-mustard); animation: livepulse 1.8s ease-out infinite; }
+
+/* ---- Sparkline ---- */
+@keyframes draw { from { stroke-dashoffset: 200; } to { stroke-dashoffset: 0; } }
+.spark-path { stroke-dasharray: 200; stroke-dashoffset: 200; animation: draw 1100ms cubic-bezier(.2,.7,.2,1) forwards; }
+
+/* ---- Sticky filter ---- */
+.sticky-filter.is-stuck { background: rgba(250,247,242,0.92); backdrop-filter: saturate(1.05) blur(6px); border-bottom: 1px solid var(--color-rule); }
+
+/* ---- App nav (Team / League / Archive pages) ---- */
+.appnav { position: sticky; top: 0; z-index: 50; background: rgba(250,247,242,0.92); backdrop-filter: saturate(1.05) blur(6px); border-bottom: 1px solid var(--color-rule); }
+
+/* ---- Audio player ---- */
+.audio-track { background: rgba(242,238,229,.4); }
+.audio-fill  { background: var(--color-mustard); }
+
+/* ---- Scrollbar hide ---- */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+/* ---- Screen reader utility ---- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
