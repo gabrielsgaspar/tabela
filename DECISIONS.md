@@ -111,4 +111,35 @@ candidate if usage data suggests demand.
 
 ---
 
+### 2026-05-04 — Phase 1 free-tier data audit (Football-Data.org)
+
+**Finding.** `pnpm run-once -- --date 2026-05-03` fetched 19 finished matches across all
+five leagues (PL 3, PD 4, BL1 3, SA 4, FL1 5) with zero errors.
+
+**What IS available on the free tier:**
+- Final scores and half-time scores for all finished matches.
+- `score.winner` ("HOME_TEAM" / "AWAY_TEAM" / "DRAW") and `score.duration`
+  ("REGULAR" / "EXTRA_TIME" / "PENALTY_SHOOTOUT") — useful for edge cases.
+- Season-to-date top scorers (goals, assists, penalties, playedMatches) via
+  `/competitions/{code}/scorers`. Assists are present for most scorers; `null`
+  only when none have been credited.
+- `penalties` sub-total in the scorer entry (how many of their goals were pens).
+- Basic team and player metadata (names, crest URLs, nationality).
+
+**What is NOT available on the free tier (confirmed):**
+- Per-match goalscorer events — no who-scored-when data at the match level.
+- Substitutions, cards, or injuries.
+- Granular match stats (shots, xG, possession).
+- Detailed player stats beyond the season-total scorer list.
+
+**Impact on prompts:** the VOICE_BLOCK no-invention rule in `src/editorial/prompts.ts`
+already accounts for this — goalscorers and match events are explicitly banned.
+No change to the prompt layer required.
+
+**Migration trigger:** if goalscorer event data becomes essential for the editorial
+quality bar, the migration target is API-Football (RapidAPI), as noted in the
+original data-source decision (2026-05-03). Document the trigger event at that time.
+
+---
+
 <!-- Add new entries above this line, newest at top -->

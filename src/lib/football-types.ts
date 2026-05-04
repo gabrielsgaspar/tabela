@@ -10,7 +10,15 @@ export interface Team {
   crest: string;
 }
 
+// "HOME_TEAM" | "AWAY_TEAM" | "DRAW" | null (null while in progress)
+export type MatchWinner = "HOME_TEAM" | "AWAY_TEAM" | "DRAW" | null;
+
+// "REGULAR" | "EXTRA_TIME" | "PENALTY_SHOOTOUT"
+export type MatchDuration = "REGULAR" | "EXTRA_TIME" | "PENALTY_SHOOTOUT";
+
 export interface Score {
+  winner: MatchWinner;
+  duration: MatchDuration;
   fullTime: { home: number | null; away: number | null };
   halfTime: { home: number | null; away: number | null };
 }
@@ -39,7 +47,8 @@ export interface ScorerEntry {
   player: Player;
   team: { id: number; name: string };
   goals: number;
-  assists: number | null; // confirmed present on free tier — see DECISIONS.md Phase 1 entry
+  assists: number | null;   // present on free tier; null for scorers with none recorded
+  penalties: number | null; // goals from the spot; also available on free tier
   playedMatches: number;
 }
 
@@ -51,5 +60,5 @@ export type LeagueCode = "PL" | "PD" | "BL1" | "SA" | "FL1";
 
 export const LEAGUES: readonly LeagueCode[] = ["PL", "PD", "BL1", "SA", "FL1"];
 
-// TODO Phase 3: add StandingsResponse type once we define the Supabase schema.
+// Phase 3: StandingsResponse type will be defined once the Supabase schema is in place.
 // The /standings endpoint is fetched in Phase 1 but typed as `unknown` until then.
