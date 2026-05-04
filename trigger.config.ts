@@ -1,8 +1,7 @@
 import { defineConfig } from "@trigger.dev/sdk/v3";
 
 export default defineConfig({
-  // Replace with your actual project ref from the Trigger.dev dashboard.
-  project: "tabela",
+  project: "proj_mrvlprkjhscqdserptaz",
   dirs: ["./src/trigger"],
   // Five leagues × two fetches × ~6 s sleep = ~90 s worst case; 300 s is generous headroom.
   maxDuration: 300,
