@@ -10,6 +10,7 @@
 // client.ts enforces API pacing regardless of JS async ordering.
 
 import { runDailyPipeline, type PipelineResult } from "../src/trigger/pipeline";
+import { createServerClient } from "../src/lib/supabase";
 
 // ---- Date helpers --------------------------------------------------------
 
@@ -82,6 +83,38 @@ function parseDateRange(): { from: string; to: string } {
   };
 }
 
+// ---- Gap detection -------------------------------------------------------
+
+interface RowCounts {
+  match_days: number;
+  season_stats: number;
+  editorials: number;
+}
+
+async function countRowsForDate(date: string): Promise<RowCounts> {
+  const db = createServerClient();
+  const [md, ss, ed] = await Promise.all([
+    db.from("match_days").select("*", { count: "exact", head: true }).eq("date", date),
+    db
+      .from("season_stats")
+      .select("*", { count: "exact", head: true })
+      .eq("snapshot_date", date),
+    db.from("editorials").select("*", { count: "exact", head: true }).eq("date", date),
+  ]);
+  return {
+    match_days: md.count ?? 0,
+    season_stats: ss.count ?? 0,
+    editorials: ed.count ?? 0,
+  };
+}
+
+function logGap(table: string, before: number, after: number) {
+  const inserted = after - before;
+  const overwritten = before;
+  const pad = " ".repeat(Math.max(0, 14 - table.length));
+  console.log(`  ${table}:${pad}before=${before}  after=${after}  inserted=${inserted}  overwritten=${overwritten}`);
+}
+
 // ---- Main ----------------------------------------------------------------
 
 async function main() {
@@ -100,10 +133,18 @@ async function main() {
     console.log(`${"─".repeat(60)}`);
 
     try {
+      const before = await countRowsForDate(date);
       const result = await runDailyPipeline(date);
+      const after = await countRowsForDate(date);
+
       results.push(result);
       totalEditorials += result.editorialsWritten;
       totalFailed += result.editorialsFailed;
+
+      console.log(`\nGap check for ${date}:`);
+      logGap("match_days", before.match_days, after.match_days);
+      logGap("season_stats", before.season_stats, after.season_stats);
+      logGap("editorials", before.editorials, after.editorials);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(`Fatal error for ${date}: ${msg}`);
