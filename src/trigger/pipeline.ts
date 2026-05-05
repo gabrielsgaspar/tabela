@@ -234,11 +234,22 @@ export async function runDailyPipeline(date: string): Promise<PipelineResult> {
     };
     const topScorers = data.scorers.slice(0, 10);
 
-    // Match captions — parallel within this league only.
-    const captionJobs = data.matches.map(async (match) => {
+    // Match captions — sequential within this league so each call receives the
+    // full text of already-generated captions as context. This lets the model
+    // see exactly which opening structures are taken and avoid repeating them.
+    // Sequential is also fine for the token-rate budget: one call at a time
+    // (~800 tokens) is well within the 30k tokens/min limit.
+    const priorCaptionOpenings: string[] = [];
+    for (const match of data.matches) {
       try {
-        const pkg = buildMatchCaptionPrompt({ context, match, topScorers });
+        const pkg = buildMatchCaptionPrompt({
+          context,
+          match,
+          topScorers,
+          priorCaptionOpenings,
+        });
         const caption = await generate<MatchCaption>(pkg);
+        priorCaptionOpenings.push(caption.caption);
         await upsertEditorial(db, {
           date,
           league_code: league,
@@ -256,9 +267,7 @@ export async function runDailyPipeline(date: string): Promise<PipelineResult> {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`[${league}] Caption failed for match ${match.id}: ${msg}`);
       }
-    });
-
-    await Promise.all(captionJobs);
+    }
 
     // League overview — one per league, after captions settle.
     try {

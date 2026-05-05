@@ -214,4 +214,10 @@ The mechanism: when a few-shot example contains entity names that appear in the 
 
 ---
 
+### 2026-05-05 — Editorial prompt convergence on near-identical matches
+
+When two matches in the same league on the same day have identical shape (same scoreline, same direction, same margin, same decisive phase), the natural English description converges and the model may produce structurally similar captions even with prior-shape context injected. This is accepted as a model/language boundary rather than a prompt bug. Tightening the prompt further would either generalise poorly (new rules per converged frame) or force awkward writing in the common case. Documented after the 2026-05-05 V2 voice fix landed with FL1 showing 1 residual violation between two 4-0 away losses (Brest at Paris FC, Rennes at Lyon).
+
+---
+
 <!-- Add new entries above this line, newest at top -->

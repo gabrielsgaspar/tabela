@@ -23,6 +23,12 @@ export interface MatchEditorialInput {
   // (e.g. who leads the golden boot race) without per-match event data.
   // Callers should slice to the top 10 before passing in.
   topScorers: ScorerEntry[];
+  // Full text of captions already generated for earlier matches in the same
+  // league on the same day, in generation order. Used by buildMatchCaptionPrompt
+  // to tell the model what opening structures have already been used so it can
+  // avoid structural repetition. Empty on the first call; grows with each
+  // successfully generated caption. Omit (or pass []) if not applicable.
+  priorCaptionOpenings?: string[];
 }
 
 // All finished matches in one league on one day — used for the league overview.

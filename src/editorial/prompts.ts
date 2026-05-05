@@ -262,7 +262,19 @@ function formatScorers(scorers: ScorerEntry[], limit: number): string {
 // 2026-05-05 entry on few-shot example contamination).
 
 export function buildMatchCaptionPrompt(input: MatchEditorialInput): PromptPackage {
-  const { context, match, topScorers } = input;
+  const { context, match, topScorers, priorCaptionOpenings = [] } = input;
+
+  // If earlier captions have been generated for this league today, append their
+  // full text so the model can see exactly which opening structures are already
+  // taken and avoid repeating them. This is the deterministic complement to the
+  // soft shape-repetition rule — the model is shown the actual prior output
+  // rather than asked to infer from an abstract prohibition.
+  const priorOpeningsBlock =
+    priorCaptionOpenings.length > 0
+      ? `\n\nShapes already used by earlier captions in this league today:\n` +
+        priorCaptionOpenings.map((c) => `  "${c}"`).join("\n") +
+        `\nDo not open with a structurally similar sentence. "Similar" means same subject type, same verb, same framing — not just same words. If your intended opening matches any of the above on those dimensions, change all three: pick a different subject, a different verb, a different angle on the match.`
+      : "";
 
   const formatBlock: TextBlock = {
     type: "text",
@@ -340,7 +352,7 @@ GOOD — same two matches, structurally distinct openings:
 
 The same rule applies to all shapes: two captions from the same league on the same day
 must not share an opening construction or resolve with the same framing. A reader
-working through a league's results should encounter structurally distinct sentences.`,
+working through a league's results should encounter structurally distinct sentences.${priorOpeningsBlock}`,
   };
 
   const userText =

@@ -222,11 +222,13 @@ async function main() {
     };
     const topScorers = data.scorers.slice(0, 10);
 
-    // Captions — parallel within league.
-    const captionJobs = data.matches.map(async (match) => {
+    // Captions — sequential within league so prior openings can be passed as context.
+    const priorCaptionOpenings: string[] = [];
+    for (const match of data.matches) {
       try {
-        const pkg = buildMatchCaptionPrompt({ context, match, topScorers });
+        const pkg = buildMatchCaptionPrompt({ context, match, topScorers, priorCaptionOpenings });
         const result = await generate<MatchCaption>(pkg);
+        priorCaptionOpenings.push(result.caption);
         await writeV2Editorial(db, {
           date,
           league_code: league,
@@ -241,8 +243,7 @@ async function main() {
         failed++;
         console.error(`[${league}] caption_v2 failed for match ${match.id}: ${err instanceof Error ? err.message : err}`);
       }
-    });
-    await Promise.all(captionJobs);
+    }
 
     // League overview.
     try {
