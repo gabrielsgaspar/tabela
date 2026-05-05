@@ -203,9 +203,25 @@ export default async function StyleguidePage() {
         {/* ── 1. Navigation & Structure ─────────────────────────────────────── */}
         <SectionHeader title="Navigation & Structure" />
 
-        <SubLabel>Masthead</SubLabel>
+        <SubLabel>Masthead — with podcast live + audio chip</SubLabel>
         <div className="mb-8 bg-paper">
-          <Masthead date="Monday, 5 May 2025" edition={36} />
+          <Masthead
+            dateLong="Mon · 5 May 2026"
+            edition="European edition"
+            number="No. 138"
+            podLive={true}
+            podcastDuration="4:24"
+          />
+        </div>
+
+        <SubLabel>Masthead — no podcast (live indicator + chip both absent)</SubLabel>
+        <div className="mb-8 bg-paper">
+          <Masthead
+            dateLong="Mon · 5 May 2026"
+            edition="European edition"
+            number="No. 138"
+            podLive={false}
+          />
         </div>
 
         <SubLabel>Footer</SubLabel>
