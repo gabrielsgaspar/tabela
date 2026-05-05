@@ -338,24 +338,71 @@ export default async function StyleguidePage() {
         </div>
 
         {/* ── 4. Editorial Block ────────────────────────────────────────────── */}
-        <SectionHeader title="Editorial Block" />
+        <SectionHeader
+          title="Editorial Block"
+          description="Three size tiers, JSX kicker nodes, dek (standfirst), paragraphs array. The lg tier is the day-overview treatment; md is the team-page week-in-context; sm is the match summary."
+        />
 
-        <div className="mb-4 max-w-prose">
-          <SubLabel>Full — with overline, headline, body, byline, pull quote</SubLabel>
+        <div className="mb-6 max-w-prose">
+          <SubLabel>lg — kicker with author credit, dek, paragraphs, pull quote</SubLabel>
           <EditorialBlock
-            overline="Premier League · Matchday 36"
+            size="lg"
+            kicker={
+              <>
+                <span>The morning brief</span>
+                <span className="text-rule2">·</span>
+                <span>By Marina Reis</span>
+              </>
+            }
             headline="The title was Liverpool's from the moment Salah turned the corner in February"
-            body={`Three points and a formality: Liverpool made it official at Anfield on Saturday, ending a run of three consecutive seasons without the trophy. The margin — six points with two games to spare — flatters Arsenal slightly, who came close enough to make Slot nervous in March but could not sustain the pressure when it mattered.\n\nFor City, a third-place finish is the story of a transition that still hasn't found its footing. The goals have dried up in a way that would have seemed unthinkable eighteen months ago.`}
-            byline="Editorial · 5 May 2025"
+            dek="Three points and a formality: Slot's side ends a three-season wait at Anfield, and the margin barely tells the story."
+            paragraphs={[
+              "Liverpool made it official at Anfield on Saturday, ending a run of three consecutive seasons without the trophy. The margin — six points with two games to spare — flatters Arsenal slightly, who came close enough to make Slot nervous in March but could not sustain the pressure when it mattered.",
+              "For City, a third-place finish is the story of a transition that still hasn't found its footing. The goals have dried up in a way that would have seemed unthinkable eighteen months ago.",
+            ]}
+            byline="Editorial · 5 May 2026"
             pullQuote="Three points and a formality: Liverpool made it official at Anfield on Saturday."
           />
         </div>
 
-        <div className="mb-4 max-w-prose">
-          <SubLabel>Minimal — headline and body only</SubLabel>
+        <div className="mb-6 max-w-prose">
+          <SubLabel>md — kicker, dek, two paragraphs</SubLabel>
           <EditorialBlock
+            size="md"
+            kicker={
+              <>
+                <span>The week in context</span>
+                <span className="text-rule2">·</span>
+                <span>By Marina Reis</span>
+              </>
+            }
+            headline="A draw that felt like a defeat, and City know it"
+            dek="Dropped points at the Etihad against a mid-table side that had nothing to play for."
+            paragraphs={[
+              "City's inability to break down a resolute Wolves backline confirmed what the xG charts have been whispering for weeks: the creativity hasn't survived the January window unscathed.",
+              "De Bruyne's absence in the first half was felt in every slow recycled build-up. The second-half Foden cameo was the best twenty minutes of football City have produced in three months — and it still wasn't enough.",
+            ]}
+          />
+        </div>
+
+        <div className="mb-6 max-w-prose">
+          <SubLabel>sm — match summary, paragraphs only (no dek)</SubLabel>
+          <EditorialBlock
+            size="sm"
+            kicker={<span>Match report</span>}
             headline="Bayern hold their nerve in Munich"
-            body="A late Kimmich free kick rescued a point that does little for either side's ambitions, but the champions will take it."
+            paragraphs={[
+              "A late Kimmich free kick rescued a point that does little for either side's ambitions, but the champions will take it.",
+            ]}
+          />
+        </div>
+
+        <div className="mb-6 max-w-prose">
+          <SubLabel>Backward compat — overline + body strings (Supabase probe shape)</SubLabel>
+          <EditorialBlock
+            overline="Premier League · Matchday 36"
+            headline="Salah's 30th — the number that put it beyond doubt"
+            body="A low block, a set piece, and a moment of individual quality. That was all Saturday required of Liverpool."
           />
         </div>
 
@@ -421,47 +468,56 @@ export default async function StyleguidePage() {
         </div>
 
         {/* ── 7. Stat Leader Cards ──────────────────────────────────────────── */}
-        <SectionHeader title="Stat Leader Cards" />
+        <SectionHeader
+          title="Stat Leader Cards"
+          description="Player name in h-serif, big number at bottom-left, sparkline + trend at bottom-right. Editor's note optional below."
+        />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 mb-8">
           <StatLeaderCard
             category="Top Scorer"
+            statLabel="Goals"
             playerName="Mohamed Salah"
             teamName="Liverpool"
             teamCrestUrl="https://crests.football-data.org/64.png"
             statValue={28}
-            statLabel="Goals"
             sparkData={SPARK_RISING}
-            rankChange={2}
+            delta={2}
+            deltaLabel="+2 this week"
+            note="Four in his last three — he is playing like the league owes him a Ballon d'Or."
           />
           <StatLeaderCard
             category="Most Assists"
+            statLabel="Assists"
             playerName="Bukayo Saka"
             teamName="Arsenal"
             teamCrestUrl="https://crests.football-data.org/57.png"
             statValue={14}
-            statLabel="Assists"
             sparkData={[2, 2, 3, 4, 5, 5, 6, 7, 8, 9, 10, 11, 12, 14]}
-            rankChange={0}
+            delta={0}
+            deltaLabel="No change"
           />
           <StatLeaderCard
             category="Clean Sheets"
+            statLabel="Clean Sheets"
             playerName="Alisson Becker"
             teamName="Liverpool"
             teamCrestUrl="https://crests.football-data.org/64.png"
             statValue={18}
-            statLabel="Clean Sheets"
-            rankChange={-1}
+            delta={-1}
+            deltaLabel="One conceded"
           />
           <StatLeaderCard
             category="Top Scorer"
+            statLabel="Goals"
             playerName="Harry Kane"
             teamName="FC Bayern München"
             teamCrestUrl="https://crests.football-data.org/5.png"
             statValue={36}
-            statLabel="Goals"
             sparkData={[1, 3, 4, 6, 8, 9, 11, 14, 16, 17, 20, 23, 25, 28, 30, 33, 36]}
-            rankChange={1}
+            delta={3}
+            deltaLabel="+3 this week"
+            note="A hat-trick against Dortmund. He is not slowing down."
           />
         </div>
 
