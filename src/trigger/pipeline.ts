@@ -41,6 +41,14 @@ import {
 } from "../editorial/types";
 import { createServerClient } from "../lib/supabase";
 import type { Json } from "../lib/database.types";
+import {
+  getTeamHistory,
+  getHeadToHead,
+  getCurrentSeasonStats,
+  type TeamHistoryContext,
+  type HeadToHeadMatch,
+  type SeasonStats,
+} from "../editorial/team-history";
 
 // ---- Season derivation ---------------------------------------------------
 
@@ -241,12 +249,47 @@ export async function runDailyPipeline(date: string): Promise<PipelineResult> {
     // (~800 tokens) is well within the 30k tokens/min limit.
     const priorCaptionOpenings: string[] = [];
     for (const match of data.matches) {
+      // Fetch team history for this match. Five parallel DB reads (read-only,
+      // no rate-limit concern). If the fetch fails, we fall back to generating
+      // without history rather than skipping the caption entirely.
+      let historyData: {
+        homeTeamHistory?: TeamHistoryContext;
+        awayTeamHistory?: TeamHistoryContext;
+        headToHead?: HeadToHeadMatch[];
+        homeSeasonStats?: SeasonStats | null;
+        awaySeasonStats?: SeasonStats | null;
+      } = {};
+      try {
+        const [homeHistory, awayHistory, h2h, homeStats, awayStats] =
+          await Promise.all([
+            getTeamHistory(db, match.homeTeam.id, date),
+            getTeamHistory(db, match.awayTeam.id, date),
+            getHeadToHead(db, match.homeTeam.id, match.awayTeam.id, date),
+            getCurrentSeasonStats(db, match.homeTeam.id, date),
+            getCurrentSeasonStats(db, match.awayTeam.id, date),
+          ]);
+        historyData = {
+          homeTeamHistory: homeHistory,
+          awayTeamHistory: awayHistory,
+          headToHead: h2h,
+          homeSeasonStats: homeStats,
+          awaySeasonStats: awayStats,
+        };
+      } catch (histErr) {
+        const histMsg = histErr instanceof Error ? histErr.message : String(histErr);
+        console.warn(
+          `[${league}] History fetch failed for match ${match.id} — ` +
+            `generating without history: ${histMsg}`,
+        );
+      }
+
       try {
         const pkg = buildMatchCaptionPrompt({
           context,
           match,
           topScorers,
           priorCaptionOpenings,
+          ...historyData,
         });
         const caption = await generate<MatchCaption>(pkg);
         priorCaptionOpenings.push(caption.caption);

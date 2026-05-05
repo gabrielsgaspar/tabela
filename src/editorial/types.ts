@@ -3,6 +3,11 @@
 // Outputs are what Claude returns via structured tool use.
 
 import type { LeagueCode, Match, ScorerEntry } from "../lib/football-types";
+import type {
+  TeamHistoryContext,
+  HeadToHeadMatch,
+  SeasonStats,
+} from "./team-history";
 
 // ---- Context ------------------------------------------------------------
 
@@ -29,6 +34,14 @@ export interface MatchEditorialInput {
   // avoid structural repetition. Empty on the first call; grows with each
   // successfully generated caption. Omit (or pass []) if not applicable.
   priorCaptionOpenings?: string[];
+  // Phase 3.5 — team history context. Optional: captions still generate without
+  // history if match_results is not populated or history fetch fails gracefully.
+  // All five fields are fetched together per match in pipeline.ts (Phase B).
+  homeTeamHistory?: TeamHistoryContext;
+  awayTeamHistory?: TeamHistoryContext;
+  headToHead?: HeadToHeadMatch[];
+  homeSeasonStats?: SeasonStats | null;
+  awaySeasonStats?: SeasonStats | null;
 }
 
 // All finished matches in one league on one day — used for the league overview.

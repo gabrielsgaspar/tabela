@@ -16,6 +16,7 @@ import type {
   LeagueOverviewInput,
   DayOverviewInput,
 } from "./types";
+import type { Streak, RecentMatch } from "./team-history";
 
 // ---- SDK-compatible local types -----------------------------------------
 // These mirror @anthropic-ai/sdk's TextBlockParam and Tool interfaces.
@@ -205,6 +206,187 @@ const DAY_OVERVIEW_TOOL: Tool = {
   },
 };
 
+// ---- Team history calibration block -------------------------------------
+// Appended to the format block (system) when team history is present in the
+// input. Placed adjacent to format instructions so the model encounters
+// the rules at the point of temptation, not buried in the global voice block.
+
+const HISTORY_CALIBRATION_SECTION = `\
+
+TEAM HISTORY CALIBRATION
+
+The TEAM HISTORY block in the user message contains verified facts from the match_results
+database. Data horizon: 2024-08-01. You may not make historical claims about periods before
+this date.
+
+WHEN TO USE IT
+Use a historical reference when the data is genuinely striking:
+  • A current streak of 4 or more consecutive results of the same type (W, D, or L).
+  • A last win more than six weeks before this match date — a meaningful dry spell.
+  • A head-to-head pattern where one team has won all of the last 3+ meetings.
+A single allusive sentence, grounded in a specific fact from the payload, is the right use.
+
+WHEN TO IGNORE IT
+  • A streak of length 1 or 2 is not a pattern worth naming. Suppress it.
+  • Fewer than 3 head-to-head meetings do not establish a trend.
+  • Unremarkable season stats for a mid-table team are background noise.
+  If the data offers nothing striking, write from match data alone and omit the history.
+  Do not signal that you checked and found nothing.
+
+HARD LIMITS — as strict as the no-invention rule
+  1. No claims about periods before 2024-08-01. "Their worst run since 2022" is forbidden.
+     "Their worst run this season" is permitted only if the payload supports it.
+  2. No invented precision from dates. If lastWin is "2026-03-15", write "since mid-March"
+     — not "a 47-day wait". You cannot count gap days reliably (postponements, breaks).
+  3. No facts not in the payload. lastWin says "vs Fulham 3-0" — you may write that.
+     You may not add "a Saka winner" or "their first clean sheet in weeks" unless those
+     claims are also in the payload.
+  4. Length-2 streaks are never notable. Length-3 is marginal; use only when match context
+     is very thin and the streak genuinely shaped the game. Length 4+ is the safe threshold.
+
+RE-STATING THE NO-INVENTION RULE for team history:
+Every historical claim must be directly traceable to the TEAM HISTORY block in this message.
+If the data does not say it, you may not say it.
+
+WORKED EXAMPLES
+
+✓ GOOD — striking losing streak, handled allusively:
+  Data: Team A on L×6 since 2024-12-26; lastWin 2024-11-02 vs [Opponent] 1-0
+  Caption: "A sixth consecutive defeat for [Team A], whose last win came in November."
+  Works: streak of 6 is above threshold; "November" is verifiable from the date;
+  no invented goalscorer, minute, or tactical detail.
+
+✓ GOOD — head-to-head pattern with three data points:
+  Data: [Team B] has won the last 3 H2H meetings (scores directly in payload)
+  Caption: "[Team B]'s third successive win over [Team A] in this fixture."
+  Works: 3-from-3 is countable from the payload; no invented context added.
+
+✓ GOOD — ignoring thin context:
+  Data: Team A on W×2; H2H shows only 1 prior meeting
+  Caption: [written from match data alone — no history reference]
+  Works: W×2 is below threshold; single H2H is not a trend. Silence is correct.
+
+✗ BAD — horizon violation:
+  Data: Team A on L×5 this season; dataFrom 2024-08-01
+  Caption: "their worst run since the 2021/22 relegation season"
+  Fails: data covers from August 2024 only; 2021/22 is outside the window.
+
+✗ BAD — invented day-count precision:
+  Data: lastWin 2026-03-15 (today is 2026-05-02)
+  Caption: "ending a 47-day wait for a win"
+  Fails: the day count may be wrong (international breaks, postponements not visible
+  in the payload). Write "since mid-March" — that is what the data warrants.
+
+✗ BAD — streak of 2 treated as notable:
+  Data: Team A on W×2
+  Caption: "back-to-back wins for [Team A], who are finding momentum at the right time"
+  Fails: W×2 is below threshold; "finding momentum" is unsupported generic copy.`;
+
+// ---- Team history formatting helpers ------------------------------------
+// Pure functions: accept data from MatchEditorialInput, return formatted strings
+// for injection into the user message.
+
+function fmtStreak(streak: Streak): string {
+  if (streak.length === 0) return "no matches in data window";
+  const word =
+    streak.type === "W" ? "win" : streak.type === "D" ? "draw" : "loss";
+  const plural = streak.length === 1 ? word : `${word}s`;
+  return `${streak.length} consecutive ${plural}` +
+    (streak.since ? ` (since ${streak.since})` : "");
+}
+
+function fmtRecent(matches: RecentMatch[]): string {
+  if (matches.length === 0) return "none";
+  return matches
+    .map((m) => `${m.result}(${m.score} vs ${m.opponent})`)
+    .join(" → ");
+}
+
+/**
+ * Returns the formatted TEAM HISTORY data block for the user message, or null
+ * if none of the history fields are populated (so callers can skip injection).
+ */
+function formatTeamHistoryBlock(input: MatchEditorialInput): string | null {
+  const { homeTeamHistory: hh, awayTeamHistory: ah, headToHead: h2h } = input;
+  if (!hh && !ah && (!h2h || h2h.length === 0)) return null;
+
+  const dataFrom =
+    hh?.dataFrom ?? ah?.dataFrom ?? "2024-08-01";
+
+  const lines: string[] = [
+    `TEAM HISTORY (data from ${dataFrom} — claims about earlier periods are not permitted)`,
+  ];
+
+  if (hh) {
+    const hs = input.homeSeasonStats;
+    lines.push(`\n[${input.match.homeTeam.shortName} — home]`);
+    if (hs) {
+      lines.push(
+        `  Season ${hs.season}:    ` +
+          `P${hs.played} W${hs.won} D${hs.drawn} L${hs.lost} | ` +
+          `GF ${hs.goalsFor} GA ${hs.goalsAgainst} | ${hs.points} pts`,
+      );
+    }
+    lines.push(`  Current streak:   ${fmtStreak(hh.currentStreak)}`);
+    lines.push(
+      `  Last win:         ${hh.lastWin
+        ? `${hh.lastWin.date} vs ${hh.lastWin.opponent} ${hh.lastWin.score} (${hh.lastWin.venue})`
+        : "none in dataset"}`,
+    );
+    lines.push(
+      `  Last clean sheet: ${hh.lastCleanSheet
+        ? `${hh.lastCleanSheet.date} vs ${hh.lastCleanSheet.opponent} ${hh.lastCleanSheet.score}`
+        : "none in dataset"}`,
+    );
+    if (hh.lastNMatches.length > 0) {
+      lines.push(
+        `  Last ${hh.lastNMatches.length} results:  ${fmtRecent(hh.lastNMatches)}`,
+      );
+    }
+  }
+
+  if (ah) {
+    const as_ = input.awaySeasonStats;
+    lines.push(`\n[${input.match.awayTeam.shortName} — away]`);
+    if (as_) {
+      lines.push(
+        `  Season ${as_.season}:    ` +
+          `P${as_.played} W${as_.won} D${as_.drawn} L${as_.lost} | ` +
+          `GF ${as_.goalsFor} GA ${as_.goalsAgainst} | ${as_.points} pts`,
+      );
+    }
+    lines.push(`  Current streak:   ${fmtStreak(ah.currentStreak)}`);
+    lines.push(
+      `  Last win:         ${ah.lastWin
+        ? `${ah.lastWin.date} vs ${ah.lastWin.opponent} ${ah.lastWin.score} (${ah.lastWin.venue})`
+        : "none in dataset"}`,
+    );
+    lines.push(
+      `  Last clean sheet: ${ah.lastCleanSheet
+        ? `${ah.lastCleanSheet.date} vs ${ah.lastCleanSheet.opponent} ${ah.lastCleanSheet.score}`
+        : "none in dataset"}`,
+    );
+    if (ah.lastNMatches.length > 0) {
+      lines.push(
+        `  Last ${ah.lastNMatches.length} results:  ${fmtRecent(ah.lastNMatches)}`,
+      );
+    }
+  }
+
+  if (h2h && h2h.length > 0) {
+    lines.push(
+      `\n[Head-to-head — last ${h2h.length} meeting${h2h.length > 1 ? "s" : ""}, newest first]`,
+    );
+    for (const m of h2h) {
+      lines.push(
+        `  ${m.date}  ${m.homeTeamName} ${m.score} ${m.awayTeamName}  [${m.season}, ${m.leagueCode}]`,
+      );
+    }
+  }
+
+  return lines.join("\n");
+}
+
 // ---- Formatting helpers -------------------------------------------------
 
 function formatResult(match: Match): string {
@@ -275,6 +457,9 @@ export function buildMatchCaptionPrompt(input: MatchEditorialInput): PromptPacka
         priorCaptionOpenings.map((c) => `  "${c}"`).join("\n") +
         `\nDo not open with a structurally similar sentence. "Similar" means same subject type, same verb, same framing — not just same words. If your intended opening matches any of the above on those dimensions, change all three: pick a different subject, a different verb, a different angle on the match.`
       : "";
+
+  const historyBlock = formatTeamHistoryBlock(input);
+  const historySectionInFormat = historyBlock ? `\n\n${HISTORY_CALIBRATION_SECTION}` : "";
 
   const formatBlock: TextBlock = {
     type: "text",
@@ -352,7 +537,7 @@ GOOD — same two matches, structurally distinct openings:
 
 The same rule applies to all shapes: two captions from the same league on the same day
 must not share an opening construction or resolve with the same framing. A reader
-working through a league's results should encounter structurally distinct sentences.${priorOpeningsBlock}`,
+working through a league's results should encounter structurally distinct sentences.${priorOpeningsBlock}${historySectionInFormat}`,
   };
 
   const userText =
@@ -363,7 +548,7 @@ working through a league's results should encounter structurally distinct senten
     `\n` +
     `SEASON TOP SCORERS (${context.leagueName})\n` +
     `${formatScorers(topScorers, 5)}\n` +
-    `\n` +
+    (historyBlock ? `\n${historyBlock}\n` : `\n`) +
     `Write the match caption using the write_match_caption tool.`;
 
   return {
@@ -376,6 +561,9 @@ working through a league's results should encounter structurally distinct senten
 
 export function buildMatchSummaryPrompt(input: MatchEditorialInput): PromptPackage {
   const { context, match, topScorers } = input;
+
+  const historyBlock = formatTeamHistoryBlock(input);
+  const historySectionInFormat = historyBlock ? `\n\n${HISTORY_CALIBRATION_SECTION}` : "";
 
   const formatBlock: TextBlock = {
     type: "text",
@@ -390,7 +578,7 @@ Guidelines:
   opposition's season context, the scorer list as background colour.
 - Do not open with the score (it appears in the headline above the body).
 - Do not describe goalscorer sequences, substitutions, or tactical instructions —
-  none of that data is available.`,
+  none of that data is available.${historySectionInFormat}`,
   };
 
   const userText =
@@ -401,7 +589,7 @@ Guidelines:
     `\n` +
     `SEASON TOP SCORERS (${context.leagueName})\n` +
     `${formatScorers(topScorers, 10)}\n` +
-    `\n` +
+    (historyBlock ? `\n${historyBlock}\n` : `\n`) +
     `Write the match summary using the write_match_summary tool.`;
 
   return {

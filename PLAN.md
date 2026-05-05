@@ -328,15 +328,21 @@ The same structure (without head-to-head) is added to `buildLeagueOverviewPrompt
 
 **Pipeline changes (src/trigger/pipeline.ts):**
 
-In Phase B, before the caption loop for each league:
-1. Collect all unique team IDs from `data.matches`.
-2. Call `getTeamHistory(db, teamId, date)` for each team in parallel (these are cheap DB reads).
-3. Build a `Map<number, TeamHistoryContext>`.
-4. Before each `buildMatchCaptionPrompt` call, call `getHeadToHead(db, homeId, awayId, date)`.
-5. Pass all three fields into `buildMatchCaptionPrompt`.
-6. Similarly pass team histories into `buildLeagueOverviewPrompt`.
+In Phase B, for each match in the caption loop:
+- Run five parallel DB reads: `getTeamHistory` for home and away, `getHeadToHead`, `getCurrentSeasonStats` for each team.
+- Pass the results into `buildMatchCaptionPrompt` as optional history fields.
+- If any history fetch fails, log a warning and generate the caption without history — never skip the caption.
 
-`buildDayOverviewPrompt` does not receive team-level history — per-team history at the cross-league day-summary level would be noise. The day overview is unchanged.
+**Editorial-kind decision (Commit 5 addendum):**
+
+| Kind | History enriched? | Reason |
+|---|---|---|
+| Match captions | **Yes** | Per-match — history is tightly scoped and signals are clear |
+| Match summaries | **Yes** | Per-match — same rationale |
+| League overviews | **No** | A league overview spans 6–10 matches (up to 20 teams). Passing full `TeamHistoryContext` for every team would add 3,000–5,000 tokens of data to a single prompt, most of which would be noise. The overview's job is to synthesise the day, not recite per-team history. Captions handle the per-team narrative; the overview handles the cross-match themes. |
+| Day overview | **No** | Cross-league; no team-specific focus. History per team would be even noisier here. |
+
+`buildLeagueOverviewPrompt` and `buildDayOverviewPrompt` are unchanged.
 
 **Files changed:** `src/editorial/types.ts`, `src/editorial/prompts.ts`, `src/trigger/pipeline.ts`.
 
