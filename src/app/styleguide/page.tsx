@@ -451,6 +451,10 @@ export default async function StyleguidePage() {
             <Sparkline data={SPARK_RISING} width={120} height={28} highlightLast />
           </div>
           <div>
+            <SubLabel>Rising + fill</SubLabel>
+            <Sparkline data={SPARK_RISING} width={120} height={28} fill highlightLast />
+          </div>
+          <div>
             <SubLabel>Flat (8 equal points)</SubLabel>
             <Sparkline data={SPARK_FLAT} width={80} height={20} />
           </div>
@@ -463,8 +467,8 @@ export default async function StyleguidePage() {
             <Sparkline data={SPARK_RISING} width={80} height={20} />
           </div>
           <div>
-            <SubLabel>Custom colour (mustard)</SubLabel>
-            <Sparkline data={[3, 6, 4, 8, 5, 9, 7]} width={80} height={20} color="#D4A24C" highlightLast />
+            <SubLabel>Custom colour + fill (mustard)</SubLabel>
+            <Sparkline data={[3, 6, 4, 8, 5, 9, 7]} width={80} height={20} color="#D4A24C" fill highlightLast />
           </div>
         </div>
 

@@ -12,15 +12,13 @@
  * The player is identified before the number — magazine-sidebar convention where
  * the person is the story and the number is the attribution.
  *
- * Note: `TrendArrow` is inlined here as a minimal private component until R5
- * ships `src/components/TrendArrow.tsx`. Delete the inline version at that point.
- *
  * Companion export:
  *   StatLeaderCardSkeleton — loading shimmer
  */
 
 import TeamCrest from "@/components/TeamCrest";
 import Sparkline from "@/components/Sparkline";
+import TrendArrow from "@/components/TrendArrow";
 
 export interface StatLeaderCardProps {
   /** Category label, top-left. E.g. "Top Scorer", "Most Assists". */
@@ -47,56 +45,6 @@ export interface StatLeaderCardProps {
   deltaLabel?: string;
   /** Editor's note at the card bottom. E.g. contextual commentary on the stat. */
   note?: string;
-}
-
-// ---- inline TrendArrow (temporary until R5) --------------------------------
-// TODO: remove this and import from @/components/TrendArrow when R5 ships.
-
-function TrendArrow({ delta }: { delta: number }) {
-  if (delta > 0) {
-    return (
-      <span className="inline-flex items-center text-pitch" title="Trending up">
-        <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true">
-          <path
-            d="M1 7 L4.5 2 L8 7"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-    );
-  }
-  if (delta < 0) {
-    return (
-      <span className="inline-flex items-center text-crimson" title="Trending down">
-        <svg width="9" height="9" viewBox="0 0 9 9" aria-hidden="true">
-          <path
-            d="M1 2 L4.5 7 L8 2"
-            stroke="currentColor"
-            strokeWidth="1.4"
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center text-ink3" title="No change">
-      <svg width="9" height="3" viewBox="0 0 9 3" aria-hidden="true">
-        <path
-          d="M1 1.5 L8 1.5"
-          stroke="currentColor"
-          strokeWidth="1.4"
-          strokeLinecap="round"
-        />
-      </svg>
-    </span>
-  );
 }
 
 // ---- main export ------------------------------------------------------------
@@ -148,7 +96,7 @@ export default function StatLeaderCard({
         {(hasSparkline || hasTrend) && (
           <div className="flex flex-col items-end gap-1">
             {hasSparkline && (
-              <Sparkline data={sparkData!} width={84} height={26} highlightLast />
+              <Sparkline data={sparkData!} width={84} height={26} fill highlightLast />
             )}
             {hasTrend && (
               <div className="flex items-center gap-1.5 text-[11px] font-mono text-ink3">
