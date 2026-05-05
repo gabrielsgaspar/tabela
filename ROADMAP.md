@@ -75,7 +75,7 @@ Build phases for Tabela. Mark `← CURRENT` next to the active phase. Each phase
 
 ---
 
-## Phase 4 — Website ← CURRENT
+## Phase 4A — Design system ✅ DONE
 
 > **Pre-condition before re-enabling the production schedule:**
 > Run `pnpm trigger:deploy` to push Phase 3.5 pipeline changes to
@@ -84,15 +84,40 @@ Build phases for Tabela. Mark `← CURRENT` next to the active phase. Each phase
 > Sequence: deploy → verify a manual run produces enriched output →
 > unpause the `daily-report` schedule in the Trigger.dev dashboard.
 
-**Goal:** ship the site Claude Design specced. Reads from Supabase, mobile-first, responsive.
+**Goal:** port the full component library from `claude_design/` so every primitive is in TypeScript and exercised at `/styleguide`.
 
-- [ ] Scaffold Next.js 15 app at `src/app/`.
-- [ ] Implement design tokens, components, and pages from `claude_design/`.
-- [ ] Home page → today's edition.
-- [ ] Team page, league page, podcast/archive page.
-- [ ] Deploy to Vercel.
+- [x] Scaffold Next.js 15 app at `src/app/`. Tailwind v4 CSS-first tokens in `globals.css`.
+- [x] Design tokens: `src/lib/tokens.ts` mirrors `@theme` block exactly.
+- [x] Supabase probe at `/styleguide` — three explicit states (error / zero rows / real row).
+- [x] Component library — all components reviewed at 375px, 768px, and 1240px against JSX source:
+  - `Masthead` — clamp wordmark, mustard period, GnG mark, live-dot + audio cue chip (conditional)
+  - `Footer` — two-column nav (About / Archive / RSS + Newsletter / Podcast feed / Contact), copyright bar
+  - `LeagueFilterChip` — bg-ink selected, border on both states, h-9 fixed height
+  - `MatchCard` — grid score layout, 40–52px tabular numerals, loser opacity-55, xG bar, affordance row
+  - `EditorialBlock` — three size tiers (sm/md/lg), dek, paragraphs array, kicker JSX nodes
+  - `StatLeaderCard` — h-serif player name, num text-[34px], TrendArrow + deltaLabel, editor's note
+  - `AudioPlayer` — dark bg-pitch card, mustard play button, chapters, skip ±15s, speed cycle
+  - `TeamCrest` — circle / roundel / shield fallback shape system with bg/fg/mono props
+  - `RaceWatch` — top/bottom zone colouring, ··· divider
+  - `Sparkline` — draw-in animation, fill prop (6% opacity area under line)
+  - `TrendArrow` — SVG chevrons, three states (up/flat/down)
+  - Skeleton and error states for all stateful components
 
-**Done when:** the live site renders the latest run's data and matches the design reference.
+**Done when:** `/styleguide` renders every component across all viewports matching the design reference. ✓ Confirmed — full visual review passed 2026-05-05.
+
+---
+
+## Phase 4B — Real pages ← CURRENT
+
+**Goal:** wire the component library to real data and ship the pages.
+
+- [ ] Home page (`/`) — today's edition: Masthead, FilterBar, MatchCard rows from Supabase, NarrativeSection with AudioPlayer.
+- [ ] League page (`/league/[code]`) — RaceWatch, StatLeaders, filtered MatchCards.
+- [ ] Team page (`/team/[id]`) — TeamHeader, recent matches, upcoming fixtures, ripple effects, season stats.
+- [ ] Routing: link MatchCard affordance row (Read the report / Lineups / Player ratings) to real pages.
+- [ ] Deploy to Vercel; confirm live site reads from Supabase.
+
+**Done when:** the live site renders the latest run's data and matches the design reference end-to-end.
 
 ---
 
