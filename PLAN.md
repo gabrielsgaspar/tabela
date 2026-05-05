@@ -110,22 +110,22 @@ One API call per league per calendar month returns all matches in that range. Th
 
 The response for a month is split by date in-process: we upsert each day's slice into `match_days` (existing pattern) and each finished match into `match_results` (new table).
 
-**Runtime estimate (current season only, Aug 2025 – May 2026):**
+**Runtime estimate (two-season scope: 2024-08-01 → yesterday):**
 
 | | |
 |---|---|
-| Months | 10 (Aug → May) |
-| Leagues | 5 |
-| Total API requests | 50 |
+| 2024/25 | 10 months × 5 leagues = 50 requests (~7 min) |
+| 2025/26 | 10 months × 5 leagues = 50 requests (~7 min) |
+| Total API requests | ~100 |
 | Rate limit (effective) | 8 req/min |
-| API call time | ~7 minutes |
-| DB upserts | ~250 `match_days` rows + ~1,800 `match_results` rows |
-| DB time | < 30 seconds |
-| **Total** | **~8 minutes** |
+| API call time | ~14 min |
+| DB upserts | ~500 `match_days` rows + ~3,600 `match_results` rows |
+| DB time | ~1 minute |
+| **Total** | **~14–16 minutes** |
 
 Acceptable as a one-time local run. No chunking or progress checkpointing needed at this scale.
 
-**If Commit 1 confirms prior seasons are accessible:** add a `--seasons` flag (e.g. `--seasons 2024,2025` for two prior seasons). Each additional season adds ~50 API calls (~7 min). Document the extended runtime in DECISIONS.md when it applies.
+**Extending to three seasons:** `--from` accepts any valid `YYYY-MM-DD` date with no lower-bound restriction. Passing `--from 2023-08-01` will backfill 2023/24 in addition to the two default seasons (~150 API calls, ~22–24 min total). Commit 1's investigation confirmed 2023/24 is accessible on the free tier.
 
 **Script interface:**
 

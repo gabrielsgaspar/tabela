@@ -79,6 +79,60 @@ export type Database = {
         }
         Relationships: []
       }
+      match_results: {
+        Row: {
+          away_team_id: number
+          away_team_name: string
+          away_team_short: string
+          created_at: string | null
+          date: string
+          home_team_id: number
+          home_team_name: string
+          home_team_short: string
+          league_code: string
+          match_id: number
+          matchday: number | null
+          score_away: number | null
+          score_home: number | null
+          season: string
+          status: string
+        }
+        Insert: {
+          away_team_id: number
+          away_team_name: string
+          away_team_short: string
+          created_at?: string | null
+          date: string
+          home_team_id: number
+          home_team_name: string
+          home_team_short: string
+          league_code: string
+          match_id: number
+          matchday?: number | null
+          score_away?: number | null
+          score_home?: number | null
+          season: string
+          status: string
+        }
+        Update: {
+          away_team_id?: number
+          away_team_name?: string
+          away_team_short?: string
+          created_at?: string | null
+          date?: string
+          home_team_id?: number
+          home_team_name?: string
+          home_team_short?: string
+          league_code?: string
+          match_id?: number
+          matchday?: number | null
+          score_away?: number | null
+          score_home?: number | null
+          season?: string
+          status?: string
+        }
+        Relationships: []
+      }
       season_stats: {
         Row: {
           created_at: string
@@ -168,13 +222,13 @@ export type Tables<
     : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
         DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
+  ? (DefaultSchema["Tables"] &
+      DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+      Row: infer R
+    }
+    ? R
     : never
+  : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
@@ -194,12 +248,12 @@ export type TablesInsert<
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+      Insert: infer I
+    }
+    ? I
     : never
+  : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
@@ -219,12 +273,12 @@ export type TablesUpdate<
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+      Update: infer U
+    }
+    ? U
     : never
+  : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
@@ -240,8 +294,8 @@ export type Enums<
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
@@ -257,8 +311,8 @@ export type CompositeTypes<
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : never
 
 export const Constants = {
   public: {
