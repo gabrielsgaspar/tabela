@@ -266,4 +266,12 @@ When two matches in the same league on the same day have identical shape (same s
 
 3. **Refined calibration criterion for Phase 3.5 eval (criterion c):** The original threshold rules (streak ≥4, H2H ≥3 meetings) were a first approximation. In practice, specific historical detail — one memorable prior meeting with a verifiable score, a notable recent gap — can be striking below the mechanical thresholds, provided it is specific and not used as filler. The pass criterion for criterion (c) is now: **zero generic filler** (e.g. "a run of two defeats continued") **and zero hollow qualifiers** (e.g. "their only previous meeting") — but specific evocative details that read well and are directly traceable to the payload are acceptable even below the mechanical thresholds. This is a refinement of the metric, not a lowering of the bar: we measure writing quality, not threshold compliance.
 
+### 2026-05-05 — Phase 3.5 calibration residual
+
+After three eval runs, the model occasionally reaches for weaker historical context (e.g. a 2-game losing streak) when the payload contains stronger context (e.g. a 54-day clean sheet drought). Empoli/Genoa surfaced this pattern across all three runs: the model wrote "beaten in both their previous two outings" (L×2 streak) rather than referencing Empoli's 54-day gap without a clean sheet that was also in the payload.
+
+**Mitigation:** accepted as a model-selection limitation rather than a prompt bug. Further rule additions (the 4th BAD example targeting sub-threshold filler) did not resolve it — the model selected weaker context in different words. The residual rate on the test set is 1/31 (3.2%).
+
+**Acceptable given:** zero factual errors across 31 pairs, zero horizon violations, 65% enrichment rate, and all other flagged cases being either detector false negatives (good captions the keyword check missed) or specific evocative detail that reads well under the refined calibration criterion.
+
 <!-- Add new entries above this line, newest at top -->

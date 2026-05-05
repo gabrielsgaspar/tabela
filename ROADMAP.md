@@ -60,22 +60,22 @@ Build phases for Tabela. Mark `← CURRENT` next to the active phase. Each phase
 
 ---
 
-## Phase 3.5 — Historical Memory ← CURRENT
+## Phase 3.5 — Historical Memory ✅ DONE
 
 **Goal:** enrich editorials with team-specific historical context (streaks, recency, head-to-head) so captions can make claims like "Wolves' first win since November" or "Arsenal's third clean sheet in four matches."
 
-- [ ] Investigate Football-Data.org free-tier historical scope; document backfill window in `DECISIONS.md`. ✓ Done — two seasons accessible (2024/25 + 2025/26); monthly chunks confirmed.
-- [ ] Schema migration: `match_results` denormalized table with btree indexes on team IDs.
-- [ ] Historical backfill script (`scripts/historical-backfill.ts`) — two-season scope, ~100 API calls, ~14 min runtime, idempotent.
-- [ ] Helper-query layer (`src/editorial/team-history.ts`) — `getTeamHistory`, `getHeadToHead`.
-- [ ] Prompt enrichment — inject team history into caption and league overview prompts.
-- [ ] Eval harness + control comparison + `HISTORY_TEST_REPORT.md`.
+- [x] Investigate Football-Data.org free-tier historical scope; document backfill window in `DECISIONS.md`. ✓ Two seasons accessible (2024/25 + 2025/26); monthly chunks confirmed.
+- [x] Schema migration: `match_results` denormalized table with btree indexes on team IDs.
+- [x] Historical backfill script (`scripts/historical-backfill.ts`) — two-season scope, ~100 API calls, ~14 min runtime, idempotent. ~3,600 rows in `match_results`.
+- [x] Helper-query layer (`src/editorial/team-history.ts`) — `getTeamHistory`, `getHeadToHead`, `getCurrentSeasonStats`.
+- [x] Prompt enrichment — team history injected into caption and summary prompts via `HISTORY_CALIBRATION_SECTION`; league and day overviews not enriched (token budget / signal-noise tradeoff).
+- [x] Eval harness (`scripts/eval-history-v1.ts`) + control comparison across 7 test dates / 31 match pairs. Three eval runs; final: 0 invented facts, 0 horizon violations, 65% enrichment, 1/31 residual filler case (accepted — see DECISIONS.md).
 
-**Done when:** eval passes all three phase criteria (zero factual errors, ≤1 calibration failure, 60% enrichment threshold); `pnpm trigger:deploy` run after Commits 4–5; backfill complete.
+**Achieved:** production pipeline (`src/trigger/pipeline.ts`) now fetches team history per match in Phase B via five parallel DB reads; falls back gracefully to history-free generation if the fetch fails. First daily run after `pnpm trigger:deploy` will produce captions with historical context.
 
 ---
 
-## Phase 4 — Website
+## Phase 4 — Website ← CURRENT
 
 **Goal:** ship the site Claude Design specced. Reads from Supabase, mobile-first, responsive.
 
