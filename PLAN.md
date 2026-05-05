@@ -1,463 +1,453 @@
-# PLAN.md — Phase 5: Audio
+# PLAN.md — Phase 3.5: Historical Memory
+
+Goal: give the editorial layer factual historical context per team so captions and overviews can make claims like "Wolves' first win since November" or "Arsenal's third clean sheet in four matches." The current pipeline has no view of anything older than the last three weeks.
+
+Two moving parts: a historical match backfill and a helper-query layer that surfaces relevant history per prompt. Phase 3.5 is purely additive — no production editorials regenerated, schedule stays paused throughout.
+
+Sits between Phase 3 (storage/pipeline, done) and Phase 4 (website).
 
 ---
 
-## What this phase delivers
-
-Every `day_overview` and `league_overview` editorial on the site gets an audio
-version. The `<AudioPlayer>` component — built dormant in Phase 4 — starts
-receiving real `audio_url` values. Users can play the daily briefing and the
-five league overviews inline.
-
-Match captions and match summaries are **not** synthesized in Phase 5. Reasons:
-captions are 15–25 words, the wrong granularity for audio; summaries number
-~50/day and their audio would cost more than the overviews for far less listening
-value. Match summary synthesis is a Phase 6 candidate if it proves wanted.
+## Six commits, in order
 
 ---
 
-## TTS provider decision: ElevenLabs
+### Commit 1 — Investigate free-tier historical scope; update DECISIONS.md and ROADMAP.md
 
-**Chosen: ElevenLabs.** Rationale and alternatives in Commit 1's DECISIONS.md
-entry below.
+**What this commit does:** No code. Investigation and documentation only.
 
-**Why not OpenAI TTS:** OpenAI's `tts-1` and `tts-1-hd` voices (alloy, echo,
-onyx, etc.) are functional but identifiably AI in a way that works against
-Tabela's editorial register. ElevenLabs at its best sounds like a real narrator.
-For a product whose entire value proposition is voice and craft, the quality
-difference is worth the cost premium — at least at Phase 5 volumes. The
-"revisit if unpleasant" threshold is documented below.
-
-**Voice: George** (ElevenLabs voice ID `jsCqWAovK2LkecY7zXl4`). Described as
-warm, measured, British-accented — the register of an informed football
-correspondent, not a sports-radio presenter. The warmth and slight rasp sit
-closer to VOICE.md's "Paulo Vinícius Coelho / The Athletic" tone than the
-cleaner, more neutral voices do.
-
-**Verify before going live:** play a sample synthesis via the ElevenLabs
-Playground or `GET https://api.elevenlabs.io/v1/voices` against `VOICE.md`
-reference paragraphs. If George is wrong in practice, document the switch in
-DECISIONS.md with the reason.
-
-**Model: `eleven_multilingual_v2`.** Synthesis happens offline (daily task),
-not at request time, so latency is irrelevant. Use the highest-quality model.
-Downgrade to `eleven_turbo_v2_5` only if monthly cost is an issue — document
-the trade-off when making the change.
-
----
-
-## Cost estimate (document in DECISIONS.md Commit 1)
-
-Synthesized kinds: `day_overview` (~3,000 chars) + 5× `league_overview`
-(~2,000 chars each) = **~13,000 chars per active matchday.**
-
-Active matchdays per month: roughly 20 across the season (international breaks,
-cup weeks, and August/May shoulder periods reduce this).
-
-**20 days × 13,000 = ~260,000 chars/month.**
-
-| Plan | Included | Per-char rate | Estimated monthly |
-|------|----------|---------------|-------------------|
-| ElevenLabs Creator | 100k chars | ~$0.24/1k overage | ~$22 + ($38) = ~$60 |
-| ElevenLabs Pro | 500k chars | — | ~$99 (no overage) |
-| OpenAI TTS (alloy/onyx) | pay-as-you-go | $0.015/1k | ~$3.90 |
-
-**Recommended starting tier: Creator.** At ~260k chars/month it costs ~$60,
-which is below the Creator+overage breakeven with Pro (~335k chars/month).
-At international break months (fewer matchdays) it will be much less.
-
-**Revisit threshold:** if monthly synthesis cost exceeds $120 for three
-consecutive months, re-evaluate — either drop to `eleven_turbo_v2_5` (lower
-cost, slightly lower quality), switch to OpenAI TTS, or restrict synthesis to
-`day_overview` only.
-
----
-
-## Commit structure
-
-Six commits. Stops at a working end-to-end state: synthesis runs in the daily
-task, audio URLs are in the database, the website plays them.
-
----
-
-## Commit 1 — SDK install + env + DECISIONS.md entries
-
-**Dependencies:**
-
-```
-pnpm add elevenlabs
-```
-
-The official ElevenLabs Node.js SDK (npm: `elevenlabs`). Uses it for the
-`/v1/text-to-speech/{voice_id}` endpoint with SSML support.
-
-**`env.example` additions:**
-
-```
-# -- Phase 5 (audio) ------------------------------------------
-ELEVENLABS_API_KEY=
-# Default voice. Override per-editorial if needed.
-ELEVENLABS_VOICE_ID=jsCqWAovK2LkecY7zXl4
-```
-
-Uncomment the Phase 5 block that was already stubbed in `env.example`.
-
-**`src/audio/types.ts`** — shared types for the audio module:
-
-```typescript
-export interface SynthesisInput {
-  // Plain text to synthesize. Pre-processed before reaching synthesize().
-  text: string;
-  // Override the default ELEVENLABS_VOICE_ID for this call.
-  voiceId?: string;
-}
-
-export interface SynthesisResult {
-  buffer: Buffer;
-  contentType: "audio/mpeg";
-}
-
-// Identifies a persisted editorial — used to name the Storage file.
-export interface EditorialRef {
-  id: number;       // primary key for the update call
-  date: string;     // YYYY-MM-DD
-  kind: "day_overview" | "league_overview";
-  slug: string;     // "" for day_overview, league code for league_overview
-}
-```
-
-**DECISIONS.md entries to add:**
-
-```
-### 2026-05-XX — TTS provider: ElevenLabs
-
-Decision: ElevenLabs for text-to-speech synthesis. Voice: George
-(jsCqWAovK2LkecY7zXl4) — warm, measured, British-accented.
-Model: eleven_multilingual_v2.
-
-Alternatives: OpenAI TTS (alloy/onyx) at ~$0.015/1k chars vs ElevenLabs
-~$0.24/1k chars on Creator tier. OpenAI is ~15× cheaper but the voice
-quality difference is audible and works against Tabela's editorial register.
-
-Synthesize kinds: day_overview and league_overview only.
-Estimated ~260k chars/month (~$60 on Creator tier).
-
-Revisit if: cost exceeds $120/month for three consecutive months.
-
-### 2026-05-XX — Audio scope: overviews only (Phase 5)
-
-Decision: Phase 5 synthesizes only day_overview and league_overview.
-Match captions (too short) and match_summary (too numerous, ~$50+/month
-extra for low listening value) are excluded. Phase 6 candidate.
-```
-
-**Verify:** `pnpm typecheck` clean. `ELEVENLABS_VOICE_ID` env var resolves.
-
----
-
-## Commit 2 — `src/audio/pre-process.ts`
-
-Prepares raw editorial text for synthesis. The function signature:
-
-```typescript
-export function preProcess(headline: string, body: string): string
-```
-
-Returns SSML-wrapped text ready for the ElevenLabs API
-(`enable_ssml_parsing: true`).
-
-**Steps in order:**
-
-**1. Strip markdown.** The editorial body should be plain prose, but defensively
-strip any markdown that leaked in:
-- Remove `**bold**` / `*italic*` → keep the text, drop the markers.
-- Remove `# headings` → keep the text.
-- Remove `[link text](url)` → keep the link text.
-
-**2. Expand abbreviations.** Apply a lookup table before synthesis:
-
-| Input | Spoken form |
-|-------|-------------|
-| `0-0` | `nil-nil` |
-| `1-0`, `2-0`, … | `one-nil`, `two-nil`, … |
-| `0-1`, `0-2`, … | `nil-one`, `nil-two`, … |
-| `N-M` (any score) | digit-by-digit via map, `N` → word, `-` → `-`, `M` → word |
-| `VAR` | `V-A-R` |
-| `PSG` | `Paris Saint-Germain` |
-| `UEFA` | `U-E-F-A` |
-| `FC` (at end of a club name, e.g. "Arsenal FC") | drop — "Arsenal FC" → "Arsenal" |
-| `Jr.` | `Junior` |
-
-Score expansion rule: any token matching `/^\d+-\d+$/` that is not a year
-(i.e., both parts ≤ 20) gets converted. Use a helper `expandScore(token)`.
-Numbers one through ten are written out; above ten use digits.
-
-**3. Pronunciation override map.** An exported constant:
-
-```typescript
-export const PRONUNCIATION_OVERRIDES: Record<string, string> = {
-  // Populated as we hear mistakes. Examples:
-  // "Vinicius": "Vineecius",
-  // "Mbappé": "Mbappay",
-};
-```
-
-Apply as simple whole-word replacements (case-sensitive). Keep the map in the
-file, not in env vars — pronunciation quirks are code-level concerns.
-
-**4. Insert SSML paragraph breaks.** Split on `\n\n`. Between paragraphs, insert
-`<break time="700ms"/>`. A sentence-final `.` followed by content at the end of
-a paragraph does not need an extra break — the 700ms covers it.
-
-**5. Wrap in `<speak>`.** The final output:
-
-```xml
-<speak>
-HEADLINE.<break time="900ms"/>
-PARAGRAPH_ONE<break time="700ms"/>
-PARAGRAPH_TWO<break time="700ms"/>
-…
-</speak>
-```
-
-The headline gets a slightly longer break after it (900ms) to act as a natural
-pause before the body begins.
-
-**Tests (in the same file as inline `if (import.meta.url ===...)`—** no test
-runner in Phase 5, just verify by running `tsx`:
+**Investigation: three test requests to run before deciding backfill scope**
 
 ```bash
-tsx src/audio/pre-process.ts
-# Should print the SSML output for a hardcoded sample.
+# 1. Current season (2025/26) — expect 200.
+curl -s -o /dev/null -w "%{http_code}\n" \
+  "https://api.football-data.org/v4/competitions/PL/matches?dateFrom=2025-08-16&dateTo=2025-08-16" \
+  -H "X-Auth-Token: $FOOTBALL_DATA_TOKEN"
+
+# 2. Prior season (2024/25) — free tier may 403 or return empty.
+curl -s -o /dev/null -w "%{http_code}\n" \
+  "https://api.football-data.org/v4/competitions/PL/matches?dateFrom=2024-08-16&dateTo=2024-08-16" \
+  -H "X-Auth-Token: $FOOTBALL_DATA_TOKEN"
+
+# 3. Wide date-range request: one full calendar month.
+#    The backfill script will use monthly chunks; verify the API accepts this width.
+curl -s -o /dev/null -w "%{http_code}\n" \
+  "https://api.football-data.org/v4/competitions/PL/matches?dateFrom=2025-08-01&dateTo=2025-08-31" \
+  -H "X-Auth-Token: $FOOTBALL_DATA_TOKEN"
 ```
 
-**Verify:** `pnpm typecheck` clean.
+Document findings in **DECISIONS.md**:
+- Whether prior seasons are accessible (403 = no; 200 + data = yes).
+- Whether month-wide date ranges work or are capped.
+- The confirmed backfill window (e.g. "current season only, from 2025-08-02").
+
+**Branching on the outcome — the agent handles all three cases without pausing for instructions:**
+
+| Outcome | Action |
+|---|---|
+| Prior season fully accessible (200 + match data) | Proceed with prior + current season scope. Default: backfill 2024/25 in full plus 2025/26 to yesterday. Document the extended window in DECISIONS.md and set `--from` in Commit 3 accordingly. |
+| Prior season partially accessible (some dates 200, some 403 or empty) | Backfill current season fully. For the prior season, fetch month by month, skip any month that 403s or returns zero matches, and document the gap (which months are missing) in DECISIONS.md. Commit 3's script must handle per-month 403s gracefully and log them as warnings rather than hard failures. |
+| Prior season unavailable (403 or empty for all tested dates) | Default to current season only. Document the constraint in DECISIONS.md and proceed. No action on Commit 3 needed beyond what was already planned. |
+
+Default to "do the smaller thing successfully." If partial access is confirmed, a gap in DECISIONS.md is the right outcome — not a stalled session waiting for instructions.
+
+**Update ROADMAP.md:**
+- Insert Phase 3.5 block between Phase 3 and Phase 4.
+- Mark Phase 3.5 `← CURRENT`. Phase 3 stays `✅ DONE`. Phase 4 loses `← CURRENT`.
+
+**Files changed:** `DECISIONS.md`, `ROADMAP.md`.
 
 ---
 
-## Commit 3 — `src/audio/synthesize.ts`
+### Commit 2 — Schema migration: match_results table
 
-Wraps the ElevenLabs SDK. Returns a Buffer, nothing else.
+**Why a dedicated table, not JSONB indexes on match_days:**
 
-```typescript
-import { ElevenLabsClient } from "elevenlabs";
-import type { SynthesisInput, SynthesisResult } from "./types";
+`match_days.payload` stores a `MatchesResponse` blob — an array of match objects inside JSONB. Querying "most recent win for team 57" against JSONB requires either unnesting the array on every query or a generated expression index over `jsonb_array_elements`. Both paths are brittle and make the helper-layer code hard to read.
 
-export async function synthesize(input: SynthesisInput): Promise<SynthesisResult>
+A flat table with explicit columns and standard btree indexes is simpler, faster, and makes the SQL straightforward. `match_days` stays as the raw archive (source of truth for the full API payload). `match_results` is the denormalized read model for team-history queries.
+
+**New table:**
+
+```sql
+CREATE TABLE match_results (
+  match_id        BIGINT PRIMARY KEY,   -- Football-Data.org match ID
+  date            DATE NOT NULL,
+  league_code     TEXT NOT NULL,
+  matchday        INT,
+  home_team_id    INT NOT NULL,
+  home_team_name  TEXT NOT NULL,
+  home_team_short TEXT NOT NULL,
+  away_team_id    INT NOT NULL,
+  away_team_name  TEXT NOT NULL,
+  away_team_short TEXT NOT NULL,
+  home_score      INT,   -- NULL if not FINISHED; only FINISHED rows populated
+  away_score      INT,
+  status          TEXT NOT NULL,
+  created_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Covering indexes for team-history queries: find all matches for a team, newest first.
+CREATE INDEX match_results_home_team_date ON match_results (home_team_id, date DESC);
+CREATE INDEX match_results_away_team_date ON match_results (away_team_id, date DESC);
+-- For date-range queries and league filtering.
+CREATE INDEX match_results_date_league ON match_results (date, league_code);
 ```
 
-**Implementation notes:**
+**RLS:** Enable RLS on `match_results`. Add anon SELECT policy (same pattern as `match_days` — migration `0002_rls_read_policies`). The pipeline writes using the service role key.
 
-- Construct `ElevenLabsClient` with `{ apiKey: process.env.ELEVENLABS_API_KEY }`.
-  Throw clearly if the key is absent.
-- `voiceId` falls back to `process.env.ELEVENLABS_VOICE_ID`. Throw if that is
-  also absent.
-- Call `client.textToSpeech.convert(voiceId, { ... })` with:
-  ```typescript
-  {
-    text: input.text,
-    model_id: "eleven_multilingual_v2",
-    enable_ssml_parsing: true,
-    voice_settings: {
-      stability: 0.45,        // slightly lower = more natural variation
-      similarity_boost: 0.80,
-    },
-  }
-  ```
-- The SDK returns a `ReadableStream<Uint8Array>` (or `Readable` in Node). Collect
-  it into a `Buffer` before returning. Use a simple async iterator:
-  ```typescript
-  const chunks: Uint8Array[] = [];
-  for await (const chunk of audioStream) { chunks.push(chunk); }
-  const buffer = Buffer.concat(chunks);
-  ```
-- Throw a descriptive `Error` on any API error (rate limit, invalid key, etc.)
-  so the caller can log the editorial ID alongside it.
-- Return `{ buffer, contentType: "audio/mpeg" }`.
+**Migration file:** created via `supabase migration new add_match_results_table`, then SQL applied via `execute_sql` MCP before snapshotting.
 
-**Verify:** `pnpm typecheck` clean. Manually test with a short string against
-the real API key before wiring into the pipeline.
+**Files changed:** `supabase/migrations/<timestamp>_add_match_results_table.sql`.
 
 ---
 
-## Commit 4 — `src/audio/store.ts`
+### Commit 3 — Historical backfill script (scripts/historical-backfill.ts)
 
-Uploads the mp3 buffer to Supabase Storage and writes the URL back to the
-`editorials` row.
+**Fetching strategy: monthly chunks**
 
-```typescript
-import type { EditorialRef, SynthesisResult } from "./types";
+One API call per league per calendar month returns all matches in that range. This is far more efficient than one call per day (which would be ~280 calls for a full season vs. 50 monthly calls).
 
-export async function storeAudio(
-  ref: EditorialRef,
-  result: SynthesisResult,
-): Promise<string>
-// Returns the public URL. Throws on upload or DB update failure.
+The response for a month is split by date in-process: we upsert each day's slice into `match_days` (existing pattern) and each finished match into `match_results` (new table).
+
+**Runtime estimate (current season only, Aug 2025 – May 2026):**
+
+| | |
+|---|---|
+| Months | 10 (Aug → May) |
+| Leagues | 5 |
+| Total API requests | 50 |
+| Rate limit (effective) | 8 req/min |
+| API call time | ~7 minutes |
+| DB upserts | ~250 `match_days` rows + ~1,800 `match_results` rows |
+| DB time | < 30 seconds |
+| **Total** | **~8 minutes** |
+
+Acceptable as a one-time local run. No chunking or progress checkpointing needed at this scale.
+
+**If Commit 1 confirms prior seasons are accessible:** add a `--seasons` flag (e.g. `--seasons 2024,2025` for two prior seasons). Each additional season adds ~50 API calls (~7 min). Document the extended runtime in DECISIONS.md when it applies.
+
+**Script interface:**
+
+```bash
+# Default: current season from its start to yesterday.
+pnpm exec tsx --env-file=.env.local scripts/historical-backfill.ts
+
+# Explicit range — re-run a contiguous window without touching dates outside it.
+pnpm exec tsx --env-file=.env.local scripts/historical-backfill.ts \
+  --from 2025-08-01 --to 2026-05-04
+
+# Surgical retry for specific failed dates — non-contiguous, comma-separated.
+# Use this after a partial run: copy the failed dates from the end-of-run summary,
+# pass them here. Only those dates are fetched and written; everything else is skipped.
+pnpm exec tsx --env-file=.env.local scripts/historical-backfill.ts \
+  --dates 2025-11-04,2026-01-12
 ```
 
-**Storage path:** `episodes/{date}/{kind}-{slug}.mp3`
+`--dates` takes precedence over `--from`/`--to` if both are passed. Season start date derived using the same `deriveSeason()` logic already in `src/trigger/pipeline.ts`.
 
-- `day_overview` (slug is `""`): `episodes/2026-05-04/day_overview.mp3`
-- `league_overview` for PL (slug is `"pl"`): `episodes/2026-05-04/league_overview-pl.mp3`
+**Idempotency:**
+- `match_days`: upsert on `(date, league_code)`. Re-running overwrites the payload — safe because historical match data does not change after FINISHED.
+- `match_results`: upsert on `match_id`. Re-running is a no-op for existing rows.
 
-The slug portion is omitted (no trailing `-`) when slug is empty.
+**Backfilling from existing match_days:** The Phase 3 pipeline already persisted the last ~3 weeks into `match_days`. The backfill script will also populate `match_results` from its own fetch. Any already-fetched dates are idempotent — the script will re-fetch and upsert cleanly. No special migration step needed to populate `match_results` from existing `match_days` rows; the re-fetch is fast (3 weeks ≈ 3 monthly requests per league, covered in the normal run).
 
-**Steps:**
+**Progress logging:**
 
-1. Upload via `getServerClient()` (service role — the task runner has this key):
-   ```typescript
-   const { error } = await client.storage
-     .from("episodes")
-     .upload(storagePath, ref.buffer, {
-       contentType: "audio/mpeg",
-       upsert: true,   // re-running for a date replaces the file
-     });
-   ```
-2. Derive the public URL:
-   ```typescript
-   const { data } = client.storage.from("episodes").getPublicUrl(storagePath);
-   const publicUrl = data.publicUrl;
-   ```
-3. Update the editorial row:
-   ```typescript
-   await client
-     .from("editorials")
-     .update({ audio_url: publicUrl })
-     .eq("id", ref.id);
-   ```
-4. Return `publicUrl`.
+```
+[PL] Aug 2025: fetched 52 matches, 42 FINISHED → 9 match_days rows, 42 match_results rows
+[PL] Sep 2025: …
+…
+[PL] done — 10 months, 300 matches_results written
+[PD] Aug 2025: …
+```
 
-**Verify:** `pnpm typecheck` clean.
+**Atomicity per date:**
+
+The Supabase JS client does not support client-side multi-table transactions. The approach is sequential writes per date with a shared try/catch:
+
+```
+for each month in range:
+  fetch API → all matches for that month
+  group matches by date
+  for each date:
+    try:
+      upsert match_days row for this date      ← write 1
+      upsert each FINISHED match into match_results  ← write 2
+    catch error:
+      log "[PL] 2025-10-23: failed — {error.message}. Skipping."
+      continue to next date
+```
+
+Both writes for a date live inside the same try block. If either fails, neither is considered "done" — the script logs the failure and moves on. Because both writes are idempotent (upsert on conflict), a re-run will re-attempt the failed date cleanly; the successful dates from the first run will no-op. This prevents the drift scenario where `match_days` has a row but `match_results` is missing its matches.
+
+The script exits with a non-zero code if any date failed, so the operator knows to re-run. It logs failed dates at the end in a summary:
+
+```
+Done. Written: 1,802 match_results across 248 dates. Failed dates: 2
+  [PL] 2025-11-04 — network timeout (re-run to retry)
+  [SA] 2026-01-12 — DB write error: ... (re-run to retry)
+```
+
+**What this script does NOT do:**
+- No editorial generation. Raw match data only.
+- No scorers or standings fetch. `season_stats` already has current-season scorer snapshots from the daily pipeline; historical scorer snapshots are not needed for Phase 3.5.
+
+**Files changed:** `scripts/historical-backfill.ts`.
 
 ---
 
-## Commit 5 — Pipeline integration in `src/trigger/daily-report.ts`
+### Commit 4 — Helper-query layer (src/editorial/team-history.ts)
 
-After each `day_overview` or `league_overview` editorial is persisted to the
-database, synthesize its audio.
-
-**Pattern (pseudo-code for each editorial):**
+**Return types:**
 
 ```typescript
-// After the INSERT/UPSERT returns the editorial id:
-if (editorial.kind === "day_overview" || editorial.kind === "league_overview") {
-  try {
-    const processed = preProcess(editorial.headline, editorial.body);
-    const result = await synthesize({ text: processed });
-    const url = await storeAudio({ id: editorial.id, date, kind: editorial.kind, slug: editorial.slug }, result);
-    console.log(`Audio stored for ${editorial.kind} ${editorial.slug || "(day)"}: ${url}`);
-  } catch (err) {
-    // Non-fatal: the editorial is already published. Log with ID for resynthesize.ts.
-    console.error(`Audio synthesis failed for editorial id=${editorial.id}:`, err);
-  }
+// A single finished match as returned from match_results.
+interface HistoricalMatch {
+  date: string;           // YYYY-MM-DD
+  leagueCode: LeagueCode;
+  homeTeamId: number;
+  homeTeamName: string;
+  homeTeamShort: string;
+  awayTeamId: number;
+  awayTeamName: string;
+  awayTeamShort: string;
+  homeScore: number;
+  awayScore: number;
+}
+
+type ResultType = 'W' | 'D' | 'L';
+
+interface Streak {
+  type: ResultType;
+  length: number;
+  since: string;  // date of the first match in the streak
+}
+
+// Bundled context for one team.
+interface TeamHistoryContext {
+  dataFrom: string;             // earliest date in match_results for this team
+  lastWin: HistoricalMatch | null;
+  lastCleanSheet: HistoricalMatch | null;
+  streak: Streak;
+  last5: HistoricalMatch[];
+}
+
+// Head-to-head between two specific teams.
+interface HeadToHeadContext {
+  meetings: HistoricalMatch[];  // most recent first, up to limit
 }
 ```
 
-Key constraint: **audio synthesis must not block editorial publication.** If
-ElevenLabs is down, editorials still publish with `audio_url = null`.
+**Two public functions (both accept a Supabase client; pure queries, no side effects):**
 
-**Order of synthesis:** synthesize `league_overview`s first (one per league
-after that league's block is processed), then `day_overview` last (it's
-generated after all leagues have been summarised). This keeps synthesis
-interleaved with the work already in flight rather than batching it at the end.
+```typescript
+export async function getTeamHistory(
+  db: SupabaseClient,
+  teamId: number,
+  beforeDate: string,  // exclusive upper bound — "before this match"
+): Promise<TeamHistoryContext>
 
-**Verify:** run `pnpm run-once --generate` against a real date. Confirm:
-- At least one editorial row in the DB has a non-null `audio_url`.
-- The URL is publicly accessible (curl it or open in browser).
-- A synthesis failure on one editorial does not abort the task.
+export async function getHeadToHead(
+  db: SupabaseClient,
+  homeTeamId: number,
+  awayTeamId: number,
+  beforeDate: string,
+  limit?: number,       // default 5
+): Promise<HeadToHeadContext>
+```
+
+`getTeamHistory` runs two queries: one for the last 5 matches (covers last win, last clean sheet, streak derivation, and last5 in a single result set), one for `dataFrom` (MIN(date) for the team in match_results). Total: 2 queries per team.
+
+`getHeadToHead` is a single query: matches where (home = A and away = B) OR (home = B and away = A), ordered by date DESC, limited to N.
+
+**Internal helpers (not exported):**
+- `resultFor(teamId, match: HistoricalMatch): ResultType`
+- `isCleanSheet(teamId, match: HistoricalMatch): boolean` — team conceded 0
+
+**Performance:** All queries hit the indexed columns `home_team_id` and `away_team_id`. A full-season table across five leagues contains roughly 1,800 match rows. These queries resolve in single-digit milliseconds.
+
+**Files changed:** `src/editorial/team-history.ts`.
 
 ---
 
-## Commit 6 — Website: wire AudioPlayer + retry script + ROADMAP.md
+### Commit 5 — Prompt enrichment (types.ts + prompts.ts + pipeline.ts)
 
-### Website wiring
+**Input type change (src/editorial/types.ts):**
 
-The `<AudioPlayer>` component already accepts `audioUrl: string | null`. In
-Phase 4B, it was always passed `null`. Now pass the real value from the
-editorial row.
+Add optional history fields to `MatchEditorialInput`:
 
-Check each page component that renders an `<AudioPlayer>`:
+```typescript
+import type { TeamHistoryContext, HeadToHeadContext } from "./team-history";
 
-**Home page (`src/app/page.tsx`):**
-```tsx
-<AudioPlayer audioUrl={dayOverview?.audio_url ?? null} headline={...} />
-```
-League overview sections:
-```tsx
-<AudioPlayer audioUrl={leagueOverview?.audio_url ?? null} headline={...} />
-```
-
-**League page (`src/app/leagues/[slug]/page.tsx`):** same pattern for
-`league_overview` audio.
-
-If Phase 4B already passes `audio_url` through (it should — the column has
-always been in the query), this commit may only require confirming the
-field name (`audio_url` not `audioUrl`) is correct end-to-end. Verify in
-the browser with a date that has audio.
-
-### `scripts/resynthesize.ts`
-
-Re-synthesizes editorials whose `audio_url` is null. Useful when ElevenLabs
-has a flaky hour on a given day.
-
-```
-tsx --env-file=.env.local scripts/resynthesize.ts
-tsx --env-file=.env.local scripts/resynthesize.ts -- --from 2026-05-01 --to 2026-05-04
-tsx --env-file=.env.local scripts/resynthesize.ts -- --date 2026-05-04
+export interface MatchEditorialInput {
+  context: EditorialContext;
+  match: Match;
+  topScorers: ScorerEntry[];
+  priorCaptionOpenings?: string[];
+  // Phase 3.5 — optional. Omitted when match_results is not yet populated.
+  homeTeamHistory?: TeamHistoryContext;
+  awayTeamHistory?: TeamHistoryContext;
+  headToHead?: HeadToHeadContext;
+}
 ```
 
-**Logic:**
-1. Parse `--from`, `--to`, `--date` args (default: yesterday).
-2. Query `editorials` for rows where `audio_url IS NULL` and
-   `kind IN ('day_overview', 'league_overview')` and `date` in the range.
-3. For each, call `preProcess` → `synthesize` → `storeAudio`.
-4. Log success/failure per row. Exit non-zero if any row failed.
+Fields are optional so existing callers (eval scripts) don't break.
 
-Matches the CLI pattern already used by `scripts/backfill.ts`.
+**Prompt changes (src/editorial/prompts.ts):**
 
-### ROADMAP.md
+In `buildMatchCaptionPrompt`, inject a `TEAM HISTORY` section when any of the three fields are present. The section structure:
 
-Tick all Phase 5 checkboxes. Mark Phase 5 ✅ DONE. Mark Phase 6 ← CURRENT.
+```
+TEAM HISTORY (dataset covers {dataFrom} to {beforeDate}):
 
-### env.example
+{homeTeam.shortName} (home):
+  Current streak: {N} {W/D/L} (since {date})
+  Last win: {date} vs {opponent}, {score} — or "none in dataset"
+  Last clean sheet: {date} vs {opponent} — or "none in dataset"
+  Last 5: [{W/D/L score opponent}, ...]
 
-Uncomment the Phase 5 section (ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID) — the
-values were stubbed, just remove the comment markers.
+{awayTeam.shortName} (away):
+  [same structure]
 
-**Verify:**
-- `pnpm typecheck` clean.
-- `pnpm lint` clean.
-- Open the site. A day with completed synthesis: play button is active,
-  audio plays.
-- A day without audio: play button is visually present, disabled, no JS errors.
-- `scripts/resynthesize.ts` finds nulls and fills them.
+Recent meetings (last {N}):
+  [{date}: {home} {score} {away}, ...]  — or "none in dataset"
+
+Rules for using TEAM HISTORY:
+- Use this context allusively when the data is striking: a streak of 4+, a last
+  win more than 6 weeks ago, a head-to-head pattern spanning 3+ meetings.
+- If nothing is striking, ignore it entirely — do not mention that you checked.
+- Do not make claims about periods before {dataFrom}. The dataset begins there.
+  "First win since November" is valid if last win is in November and dataFrom
+  is before November. "Best run since 2023" is not valid — dataset does not
+  cover 2023.
+- Every historical claim must be traceable to the TEAM HISTORY block above.
+```
+
+The same structure (without head-to-head) is added to `buildLeagueOverviewPrompt`.
+
+**Pipeline changes (src/trigger/pipeline.ts):**
+
+In Phase B, before the caption loop for each league:
+1. Collect all unique team IDs from `data.matches`.
+2. Call `getTeamHistory(db, teamId, date)` for each team in parallel (these are cheap DB reads).
+3. Build a `Map<number, TeamHistoryContext>`.
+4. Before each `buildMatchCaptionPrompt` call, call `getHeadToHead(db, homeId, awayId, date)`.
+5. Pass all three fields into `buildMatchCaptionPrompt`.
+6. Similarly pass team histories into `buildLeagueOverviewPrompt`.
+
+`buildDayOverviewPrompt` does not receive team-level history — per-team history at the cross-league day-summary level would be noise. The day overview is unchanged.
+
+**Files changed:** `src/editorial/types.ts`, `src/editorial/prompts.ts`, `src/trigger/pipeline.ts`.
 
 ---
 
-## Phase 5 "done when" criteria
+### Commit 6 — Eval harness (scripts/eval-history-v1.ts) + HISTORY_TEST_REPORT.md
 
-- [ ] `pnpm typecheck` and `pnpm lint` clean
-- [ ] `synthesize()` returns a valid mp3 buffer for a test string
-- [ ] Daily task synthesizes day_overview and league_overview after persisting each
-- [ ] Audio files appear in Supabase Storage at `episodes/{date}/…`
-- [ ] `editorials.audio_url` is non-null for a synthesized row
-- [ ] AudioPlayer on the site plays real audio for a date that has it
-- [ ] AudioPlayer is visually present but dormant for dates without audio (no regression)
-- [ ] `scripts/resynthesize.ts` re-fills missing audio for a given date range
-- [ ] A synthesis failure does not abort or corrupt the editorial publish step
-- [ ] `ELEVENLABS_VOICE_ID` is in `env.example` (not hardcoded in source)
-- [ ] DECISIONS.md has entries for provider choice, voice choice, cost estimate
+**Picking test dates:**
+
+After the historical backfill runs, query `match_results` to identify 3–5 dates with interesting patterns. Criteria to check automatically in the eval script:
+- A team ending a winless streak of ≥ 4 matches.
+- A team continuing a winning streak of ≥ 4 matches.
+- A fixture with at least 3 prior meetings in the dataset.
+
+The script prints the selected dates and their rationale before generating editorials. The report documents the selection logic.
+
+**Eval script pattern:** mirrors `scripts/eval-voice-v2.ts`.
+
+For each test date and league, the script generates **two** captions per match:
+1. **hist_v1** — with the team_history block injected.
+2. **hist_v1_control** — identical prompt, but with the team_history block omitted (as if the feature were not present). This is the current-baseline equivalent.
+
+```
+For each test date and league:
+  Read match_days + match_results from DB (no API calls)
+  For each match:
+    call getTeamHistory + getHeadToHead
+    generate WITH history → write to match_caption_hist_v1
+    generate WITHOUT history → write to match_caption_hist_v1_control
+```
+
+Both writes go to experimental kind labels. Neither overwrites production kinds.
+
+**HISTORY_TEST_REPORT.md structure for each test editorial:**
+
+```
+[PL / Arsenal v Brighton — 2026-04-14]
+Team history injected:
+  Arsenal: 4W streak since 2026-03-24; last clean sheet 2026-04-07 vs Fulham
+  Brighton: 1L streak; last win 2026-04-07
+  H2H: 3 meetings — Arsenal 2-0, Brighton 1-1, Arsenal 3-1
+Control (no history):
+  "Arsenal made it four straight with a routine 2-0 at the Emirates, ..."
+With history:
+  "Arsenal extended their winning run to four, keeping a fourth clean sheet in five ..."
+Assessment:
+  ✓ History used correctly — streak and clean sheet both in payload
+  ✓ No claims outside dataset window
+  ✓ Allusive, not mechanical — enrichment is visible but not forced
+  Verdict: PASS — with-history version is richer
+```
+
+**Calibration failure definitions** — the following are explicit failures and must be flagged in the report:
+
+| Failure type | Description | Example |
+|---|---|---|
+| **Under-threshold use** | References a streak of length 1 or 2 as if it's notable. A single result is not a streak; two results is a minimum pattern, not a talking point. | "Brighton come into this on the back of back-to-back wins" when H2H shows only 2 meetings |
+| **Failure to use striking data** | A streak of length ≥ 5 that ended on the test date is ignored entirely. If a team's 6-game unbeaten run ended today, that is the story. Omitting it is a calibration failure. | Arsenal 6W streak ended by Brighton, caption says nothing about it |
+| **Horizon violation** | Caption makes a historical claim about a period before `dataFrom`. | "Their best run since the 2023/24 season" when dataFrom is August 2025 |
+| **Hallucinated specificity** | Caption cites a specific date, opponent, or score not present in the team_history payload. | "Their last win came at Anfield in February" when payload shows last win was vs Burnley |
+
+**Phase pass criterion:**
+
+All three of the following must hold:
+
+1. **No calibration failures** of type "horizon violation" or "hallucinated specificity" across all test editorials. These are factual errors — zero tolerance.
+2. **No more than 1** calibration failure of type "under-threshold use" or "failure to use striking data" across all test editorials. These are voice-quality errors — near-zero tolerance.
+3. **The with-history version is recognisably richer than the control version on at least 60% of test editorials**, judged qualitatively. The 60% threshold accounts for matches where there simply isn't striking history to surface — in those cases the two versions should be roughly equivalent, which is acceptable.
+
+If criteria 1 or 2 fail, tighten the prompt instructions before declaring the phase done. If criterion 3 fails, investigate whether the team_history payload is being constructed correctly and whether the prompt threshold ("streak of 4+") is calibrated right.
+
+**Files changed:** `scripts/eval-history-v1.ts`, `HISTORY_TEST_REPORT.md`.
 
 ---
 
-## What this plan defers
+## Risks and open questions
 
-- **Match summary synthesis** — too expensive to justify at Phase 5 volume.
-  Add in Phase 6 if user listening behaviour suggests value.
-- **Signed (private) audio URLs** — the `episodes/` bucket is public-read.
-  Switch to signed URLs in Phase 6 when/if auth is in place.
-- **Per-league voice differentiation** — all leagues use the same voice.
-  A different voice per league (e.g. Italian-accented for Serie A) is a polish
-  item, not a Phase 5 concern.
-- **Audio quality A/B testing** — voice and `stability`/`similarity_boost`
-  settings are starting points. Tune after listening to real output.
+**Free-tier scope (resolved in Commit 1):** If the free tier does not allow prior-season fetches, the backfill window is limited to the current season (Aug 2025 – present). This is sufficient for streaks and recency claims within the current season. The prompt must declare the data boundary clearly, and the model must not extrapolate beyond it.
+
+**Wide date-range requests (resolved in Commit 1):** Football-Data.org may reject month-wide `dateFrom/dateTo` windows. If so, fall back to weekly chunks (≈40 requests per league per season instead of 10; runtime roughly 4× longer, ~30 min). Update Commit 3's implementation accordingly after Commit 1's findings.
+
+**First-run bootstrap (no match_results data yet):** When Commit 5 lands but before Commit 3's backfill runs, `getTeamHistory` returns nulls/empty arrays. Because the history fields in `MatchEditorialInput` are optional, `buildMatchCaptionPrompt` omits the history block entirely in this state. The pipeline falls back to the current behaviour. No breakage.
+
+**Token budget:** Adding a team_history block to each caption call adds roughly 200–400 tokens of input context per match. At Claude Sonnet input token pricing this is negligible at production scale (~20 matches/day). The 30k tokens/min org ceiling is unaffected — sequential caption generation keeps per-minute burst low.
+
+**Over-reliance on history in the model:** Even with the "ignore if unremarkable" instruction, early eval runs may show the model reaching for history context when nothing notable is there. The eval harness is designed to catch this. Tighten the threshold wording in the prompt if needed before shipping.
+
+---
+
+## Production enablement
+
+**When Phase 3.5 ships, the production daily task picks up the new prompt enrichment automatically.** No follow-up toggle or separate commit needed.
+
+The mechanism: Commit 5 makes `homeTeamHistory`, `awayTeamHistory`, and `headToHead` optional fields on `MatchEditorialInput`. The pipeline (Commit 5) calls `getTeamHistory` and `getHeadToHead` before building each prompt. Once `match_results` is populated (Commit 3's backfill has run), those calls return data and the history block appears in production editorials from the next daily run onward.
+
+Before the backfill runs, the fields are null/empty, the history block is omitted, and the pipeline behaves exactly as it does today. There is no flag to flip.
+
+**Pre-conditions before resuming the schedule:**
+1. Commit 3's backfill script must have run to completion (or near-completion — isolated date failures are acceptable).
+2. Commit 6's eval must have passed all three phase criteria.
+3. **`pnpm trigger:deploy` must be re-run** after Commits 4 and 5 land. Trigger.dev deploys a bundled snapshot of the code at deploy time — changes to `prompts.ts` and `pipeline.ts` do not reach the live scheduled task until a new deploy is pushed. The import chain is a single source of truth (`daily-report.ts` → `pipeline.ts` → `prompts.ts`, no forked copies), but the deployed bundle is pinned to the version at last deploy. This is a small action item, not a problem — just make it explicit.
+4. ROADMAP.md updated to mark Phase 3.5 ✅ DONE and Phase 4 ← CURRENT.
+
+The schedule (currently paused) is re-enabled at the start of Phase 4, not at the end of Phase 3.5, as originally planned.
+
+---
+
+## What this phase does NOT do
+
+- Does not regenerate existing editorials. The 180+ editorials already in the DB are untouched.
+- Does not change the website (Phase 4). Phase 4 will pick up enriched editorials naturally — the new editorial fields are backward-compatible.
+- Does not resume the daily schedule. Schedule stays paused throughout Phase 3.5.
+- Does not fetch historical scorer or standings data. `season_stats` already has current-season snapshots; multi-season scorer history is not needed for the claims this phase enables.
+- Does not add multi-season history claims. The prompt explicitly declares the dataset boundary. Claims like "best November in five years" require data from five Novembers, which we do not have.

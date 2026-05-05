@@ -60,7 +60,22 @@ Build phases for Tabela. Mark `← CURRENT` next to the active phase. Each phase
 
 ---
 
-## Phase 4 — Website ← CURRENT
+## Phase 3.5 — Historical Memory ← CURRENT
+
+**Goal:** enrich editorials with team-specific historical context (streaks, recency, head-to-head) so captions can make claims like "Wolves' first win since November" or "Arsenal's third clean sheet in four matches."
+
+- [ ] Investigate Football-Data.org free-tier historical scope; document backfill window in `DECISIONS.md`. ✓ Done — two seasons accessible (2024/25 + 2025/26); monthly chunks confirmed.
+- [ ] Schema migration: `match_results` denormalized table with btree indexes on team IDs.
+- [ ] Historical backfill script (`scripts/historical-backfill.ts`) — two-season scope, ~100 API calls, ~14 min runtime, idempotent.
+- [ ] Helper-query layer (`src/editorial/team-history.ts`) — `getTeamHistory`, `getHeadToHead`.
+- [ ] Prompt enrichment — inject team history into caption and league overview prompts.
+- [ ] Eval harness + control comparison + `HISTORY_TEST_REPORT.md`.
+
+**Done when:** eval passes all three phase criteria (zero factual errors, ≤1 calibration failure, 60% enrichment threshold); `pnpm trigger:deploy` run after Commits 4–5; backfill complete.
+
+---
+
+## Phase 4 — Website
 
 **Goal:** ship the site Claude Design specced. Reads from Supabase, mobile-first, responsive.
 

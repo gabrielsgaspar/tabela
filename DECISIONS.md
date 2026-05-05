@@ -220,4 +220,38 @@ When two matches in the same league on the same day have identical shape (same s
 
 ---
 
+### 2026-05-05 — Football-Data.org free-tier historical scope; Phase 3.5 backfill window
+
+**Investigation.** Three test requests against the Football-Data.org v4 API before writing the historical backfill script:
+
+| Test | Endpoint | Result |
+|---|---|---|
+| Current season single day | `PL/matches?dateFrom=2025-08-16&dateTo=2025-08-16` | 200 — 5 matches returned |
+| Prior season single day | `PL/matches?dateFrom=2024-08-16&dateTo=2024-08-16` | 200 — 1 match returned (Man Utd 1-0 Fulham) |
+| Two seasons back | `PL/matches?dateFrom=2023-08-11&dateTo=2023-08-11` | 200 — 1 match returned |
+| Month-wide range | `PL/matches?dateFrom=2025-08-01&dateTo=2025-08-31` | 200 — 30 matches, first: 2025-08-15, last: 2025-08-31 |
+
+**Findings.**
+- The free tier provides full read access to at least three seasons of historical match data (2023/24, 2024/25, 2025/26). No 403 or permission error for any tested date.
+- Month-wide `dateFrom/dateTo` requests work correctly. The API returns all matches in the range in one response, spanning multiple matchdays. No evidence of a date-range cap.
+- The monthly-chunk strategy (one request per league per calendar month) is confirmed viable.
+
+**Decision: backfill 2024/25 + 2025/26 (two seasons).**
+
+2023/24 is accessible but not included in the default backfill. Two seasons gives sufficient depth for all editorial claims this phase targets (streaks, recency, head-to-head). Adding 2023/24 would cost an additional ~50 API calls (~7 min) and ~1,800 more `match_results` rows — modest but unnecessary for Phase 3.5. If future voice work requires three-season comparisons, run the backfill script with `--from 2023-08-01`.
+
+**Updated runtime estimate for Commit 3 (two-season scope):**
+
+| | |
+|---|---|
+| 2024/25 | 10 months × 5 leagues = 50 requests (~7 min) |
+| 2025/26 | 10 months × 5 leagues = 50 requests (~7 min) |
+| Total API calls | ~100 |
+| Total runtime | ~14–16 minutes (rate-limited to 8 req/min) |
+| Estimated match_results rows | ~3,600 (≈1,800 per season) |
+
+**Branching outcome:** "Prior season fully accessible" — per PLAN.md, the backfill script defaults to `--from 2024-08-01 --to yesterday`.
+
+---
+
 <!-- Add new entries above this line, newest at top -->
