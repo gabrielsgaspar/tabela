@@ -200,4 +200,18 @@ DOCKER_CONFIG=/tmp/trigger-docker-config pnpm trigger:deploy
 
 ---
 
+### 2026-05-05 — Few-shot examples in editorial prompts must use placeholder entities, never real ones
+
+**Decision.** All worked examples in `src/editorial/prompts.ts` that illustrate caption shapes, voice principles, or bad patterns must use abstract placeholders (`[Team A]`, `[Team B]`, `[Player]`, `[N]`, `[score]`) — never real team names, player names, venue names, or specific matchday numbers.
+
+**Rationale.** Surfaced by the V2 test loop on 2026-04-26: the shape 5 example used "Six goals shared at Le Havre on matchday 31". The real match on that date was Le Havre 4–4 FC Metz on matchday 31 — the model reproduced the example verbatim, outputting "Six goals shared" for a match that produced eight goals. Same class of error confirmed in three other shape examples (shapes 1, 3, 4) where the example teams happened to match the real fixture; the model reproduced the example text nearly verbatim, bypassing the no-invention rule entirely.
+
+The mechanism: when a few-shot example contains entity names that appear in the current match input, the model can pattern-match on those names and regurgitate the example text as if it were generated output. The no-invention guardrail does not catch this because the model does not register it as invention.
+
+**Fix applied.** All seven locations with real entities in prompt examples updated to placeholders in commit following VOICE_V2_TEST_REPORT_V2.md. A NOTE was added to the shape examples block in the caption format prompt explicitly warning that placeholders are structural illustrations only, not fill-in-the-blank templates.
+
+**Rule.** Any future addition of worked examples to any prompt in `src/editorial/prompts.ts` must use placeholders. If a concrete example is needed for clarity, use teams from a fictional league not among the five covered leagues.
+
+---
+
 <!-- Add new entries above this line, newest at top -->

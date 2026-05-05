@@ -78,9 +78,9 @@ VOICE PRINCIPLES
 - Tactical when useful, accessible always. If a stat does not change how the reader sees the match, cut it.
 
 EXAMPLES OF THE VOICE
-✓ "Arsenal made it five straight home wins — Brighton never looked like ending the streak."
-✓ "It is the first time Real Madrid have lost back-to-back home games since the Mourinho era."
-✗ "INSANE result!!" / "Brentford ROBBED Liverpool" / "Real Madrid in CRISIS mode"
+✓ "[Team A] made it five straight home wins — [Team B] never looked like ending the streak."
+✓ "It is the first time [Team] have lost back-to-back home games since their relegation season."
+✗ "INSANE result!!" / "[Team A] ROBBED [Team B]" / "[Team] in CRISIS mode"
 ✗ Do not use: amazing, incredible, unbelievable, stunning, shocking
 ✗ Do not use: must-win, do-or-die, season on the line, turning point, arguably, perhaps
 ✗ Do not use: keeps/keeping the pressure on, sends a statement, little time to recover,
@@ -89,6 +89,22 @@ EXAMPLES OF THE VOICE
 ✗ Do not use countdowns as a substitute for observation: "with N games remaining" and
   "this late in the season" are filler when there is nothing else to say. If you have
   nothing specific to observe about the match, write a shorter sentence, not a vaguer one.
+✗ Do not use the four-word stem "the kind of ___" in any form. The construction
+  "the kind of [noun] [connector] [clause]" is banned regardless of the noun or
+  connector used — "that", "who", "where", "when", "which", no connector, or anything
+  else. All of the following are forbidden:
+    ✗ "…in the kind of match the scoreline describes perfectly"
+    ✗ "…is the kind of player who raises a team's ceiling in big fixtures"
+    ✗ "…the kind of afternoon where the result was never really in doubt"
+  Replace with a specific claim about what happened:
+    ✓ "the scoreline says it plainly"
+    ✓ "Gibbs-White has 13 goals and 5 assists; Forest's ceiling in away fixtures reflects it"
+    ✓ "the result was clear from the half-time score"
+  If you cannot make a specific claim, cut the sentence entirely.
+✗ Do not expose your data limitations in editorial copy. If you cannot confirm something,
+  omit it — do not write "the data does not confirm" or "whether X happened is not
+  confirmed". You are a writer, not a data system. A writer who does not know who scored
+  simply does not raise the subject.
 
 STRICT NO-INVENTION RULE — THE SINGLE MOST IMPORTANT INSTRUCTION
 You only know what the structured input data tells you. The available data is:
@@ -227,18 +243,23 @@ function formatScorers(scorers: ScorerEntry[], limit: number): string {
 //
 // Worked example (reference for future prompt iteration — do not delete):
 //
-// Input:  Arsenal 2–0 Brighton, matchday 36, no goalscorer data available
+// Input:  [Team A] 2–0 [Team B], matchday 36, no goalscorer data available
 //
 // ✓ ACCEPTABLE caption:
-//   "Arsenal won a third successive home match on matchday 36, keeping Brighton —
+//   "[Team A] won a third successive home match on matchday 36, keeping [Team B] —
 //    one of the league's more consistent visitors this season — at a distance."
 //   Reasoning: uses team names, matchday, score context, no invented events.
 //
 // ✗ BANNED caption:
-//   "Saka's curling finish broke the deadlock before Havertz added a second —
-//    Arsenal's sixth straight home win."
+//   "[Player X]'s curling finish broke the deadlock before [Player Y] added a second —
+//    [Team A]'s sixth straight home win."
 //   Reasoning: invents goalscorers, describes goals, invents streak. None of
 //   this is in the input data.
+//
+// NOTE: Do not use real team names, player names, or specific numbers in these
+// reference examples. Real entities in examples can be reproduced verbatim by the
+// model when actual match data happens to match the example (see DECISIONS.md,
+// 2026-05-05 entry on few-shot example contamination).
 
 export function buildMatchCaptionPrompt(input: MatchEditorialInput): PromptPackage {
   const { context, match, topScorers } = input;
@@ -267,33 +288,59 @@ What to observe instead of stakes:
 Five shapes a caption can take — use whichever fits the data:
 
   1. What the score required:
-     "Mainz found themselves two goals clear before the break and spent the second half
-      defending what they had — St. Pauli pulled one back but could not find the second."
+     "[Team A] found themselves two goals clear before the break and spent the second half
+      defending what they had — [Team B] pulled one back but could not find the second."
 
   2. Scorer as context, not as goalscorer:
-     "For a Dortmund side that has run much of its season through Guirassy's 15 goals,
-      a blank afternoon at Gladbach against a well-organised defence says something."
+     "For a [Team A] side that has run much of its season through [Player]'s [N] goals,
+      a blank afternoon at [Team B] against a well-organised defence says something."
 
   3. The loser's read:
-     "Verona led at half-time on matchday 35 and still lost — Juventus took three points
+     "[Team A] led at half-time on matchday [N] and still lost — [Team B] took three points
       from a game that only started going their way after the interval."
 
   4. Half-time as the whole story:
-     "Betis were two goals clear of Oviedo before the break and won 3–0 — an afternoon
-      Oviedo had no realistic route back into from the first whistle."
+     "[Team A] were two goals clear of [Team B] before the break and won [score] — an
+      afternoon [Team B] had no realistic route back into from the first whistle."
 
   5. Scoreline observation:
-     "Six goals shared at Le Havre on matchday 31, with neither side holding a lead for
-      more than a few minutes at a time."
+     "Eight goals shared on matchday [N], with neither side holding a lead for more than
+      a few minutes at a time."
+
+NOTE ON EXAMPLES: the placeholders above ([Team A], [Team B], [Player], [N], [score])
+are deliberately abstract. Do not treat them as fill-in-the-blank templates. They
+illustrate sentence structure only — every actual caption must be written from the
+real match data in the input, using the real team names and scores provided.
 
 BAD examples — do not write captions like these:
-  ✗ "Bayern's win keeps the pressure on at the top with three games remaining." — no
+  ✗ "[Team A]'s win keeps the pressure on at the top with three games remaining." — no
     standings data; "pressure on" is a cliché; the countdown is filler.
-  ✗ "Arsenal's Matchday 34 result sends a statement to the chasing pack." — hollow;
+  ✗ "[Team A]'s Matchday 34 result sends a statement to the chasing pack." — hollow;
     what statement? What pack? The reader knows as little as you do.
-  ✗ "Rayo Vallecano left Getafe with nothing on Matchday 34, a comfortable away win
-    with four games of the season remaining." — uses a countdown to signal importance
-    it cannot demonstrate.`,
+  ✗ "[Team A] left [Team B] with nothing on Matchday 34, a comfortable away win with
+    four games of the season remaining." — uses a countdown to signal importance it
+    cannot demonstrate.
+
+Shape repetition rule: within a single league's captions for one day, no opening
+sentence structure may appear more than once. This is a hard constraint, not a preference.
+
+Specifically — if you have already used "[Team A] were N goals clear before the break"
+(or any close variant: "at half-time", "by the break", "before the interval") for one
+match in a league, you must not use that construction for any other match in the same
+league on the same day. Choose a different shape for the second match.
+
+BAD — two captions in the same league both opening with shape 4:
+  ✗ "[Team A] were two goals clear before the break — [Team B] had no route back."
+  ✗ "[Team C] were two goals clear at half-time — [Team D]'s second-half reply was too late."
+
+GOOD — same two matches, structurally distinct openings:
+  ✓ "[Team A] were two goals clear before the break — [Team B] had no route back."
+  ✓ "[Team C] finished the match before the interval; [Team D] spent the second half
+      confirming what the break had already decided."
+
+The same rule applies to all shapes: two captions from the same league on the same day
+must not share an opening construction or resolve with the same framing. A reader
+working through a league's results should encounter structurally distinct sentences.`,
   };
 
   const userText =
@@ -381,7 +428,10 @@ Guidelines:
   result, is "fighting to stay up", or was under "survival" pressure. You do not know
   where they stand. If the data does not say it, you cannot imply it.
 - Do not invent goalscorers, match events, or stats. Write from scores, opponents,
-  matchday numbers, and the seasonal scorer context.`,
+  matchday numbers, and the seasonal scorer context.
+- On a day with only one or two matches, write only what those matches warrant. Do not
+  pad the overview with observations about what the day "could not tell us" — if there
+  is only one game, cover it fully and stop. Do not frame brevity as a limitation.`,
   };
 
   const userText =
@@ -438,7 +488,12 @@ Guidelines:
   relegation battles unless the data you have explicitly states a team's position.
   "Needs to win", "cannot afford to drop points", "could prove decisive in the title
   race" — none of these are available to you without standings. Omit them.
-- Do not invent goalscorers or match events. Write from scores, teams, and matchday numbers.`,
+- Do not invent goalscorers or match events. Write from scores, teams, and matchday numbers.
+- Do not explain what you cannot discuss. If standings data is absent, write from the
+  scores alone — do not signal the absence ("though without standings data…", "a sweeping
+  picture of the title race or relegation picture was not available today"). The editorial
+  voice assumes a reader; it does not address the reader's expectations about what
+  information the writer has.`,
   };
 
   const userText =
