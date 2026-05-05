@@ -77,6 +77,13 @@ Build phases for Tabela. Mark `← CURRENT` next to the active phase. Each phase
 
 ## Phase 4 — Website ← CURRENT
 
+> **Pre-condition before re-enabling the production schedule:**
+> Run `pnpm trigger:deploy` to push Phase 3.5 pipeline changes to
+> the live task. The current deployed version (20260505.3) pre-dates
+> Phase 3.5 and would produce un-enriched editorials if it ran.
+> Sequence: deploy → verify a manual run produces enriched output →
+> unpause the `daily-report` schedule in the Trigger.dev dashboard.
+
 **Goal:** ship the site Claude Design specced. Reads from Supabase, mobile-first, responsive.
 
 - [ ] Scaffold Next.js 15 app at `src/app/`.
