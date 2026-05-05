@@ -161,6 +161,12 @@ const HISTORY_KEYWORDS = [
   "tenth",
   "eleventh",
   "run of",
+  "winning run",
+  "losing run",
+  "streak",
+  "successive",
+  "meetings",
+  "month",
   "months",
   "weeks",
   "january",
@@ -458,11 +464,11 @@ async function generateForTestCase(tc: TestCase): Promise<EvalResult[]> {
     // Write to DB
     const slug = String(match.id);
     await Promise.all([
-      upsertCaption(tc.date, tc.league, "match_caption_hist_v1", slug, captionEnriched).catch(
-        (e) => console.warn(`    DB write hist_v1 failed: ${e.message}`),
+      upsertCaption(tc.date, tc.league, "match_caption_hist_v1_rerun", slug, captionEnriched).catch(
+        (e) => console.warn(`    DB write hist_v1_rerun failed: ${e.message}`),
       ),
-      upsertCaption(tc.date, tc.league, "match_caption_hist_v1_control", slug, captionControl).catch(
-        (e) => console.warn(`    DB write control failed: ${e.message}`),
+      upsertCaption(tc.date, tc.league, "match_caption_hist_v1_rerun_control", slug, captionControl).catch(
+        (e) => console.warn(`    DB write rerun_control failed: ${e.message}`),
       ),
     ]);
 
@@ -541,7 +547,7 @@ function writeReport(allResults: EvalResult[]): void {
   const overall = cA_pass && cB_pass && cC_pass && cD_pass;
 
   const lines: string[] = [];
-  lines.push("# HISTORY_TEST_REPORT.md — Phase 3.5 Eval");
+  lines.push("# HISTORY_TEST_REPORT_RERUN.md — Phase 3.5 Eval (Rerun with refined prompt)");
   lines.push("");
   lines.push(`Generated: ${new Date().toISOString()}`);
   lines.push(`Test editorials: ${total} pairs across ${TEST_CASES.length} dates`);
@@ -721,16 +727,116 @@ function writeReport(allResults: EvalResult[]): void {
   );
 
   const report = lines.join("\n");
-  writeFileSync(resolve(__dirname, "../HISTORY_TEST_REPORT.md"), report, "utf-8");
-  console.log(`\nReport written to HISTORY_TEST_REPORT.md`);
+  writeFileSync(resolve(__dirname, "../HISTORY_TEST_REPORT_RERUN.md"), report, "utf-8");
+  console.log(`\nReport written to HISTORY_TEST_REPORT_RERUN.md`);
+}
+
+// ---- Rescore existing _hist_v1 rows with fixed keyword detector ----------
+
+async function rescoreExistingV1(): Promise<void> {
+  console.log("\n" + "=".repeat(60));
+  console.log("PHASE 1: RESCORE existing match_caption_hist_v1 rows");
+  console.log("       (fixed keyword detector — confirming corrected score)");
+  console.log("=".repeat(60));
+
+  const emptyCtx = (date: string): TeamHistoryContext => ({
+    teamId: 0,
+    asOfDate: date,
+    dataFrom: null,
+    lastWin: null,
+    lastCleanSheet: null,
+    currentStreak: { type: "W" as const, length: 0, since: null },
+    lastNMatches: [],
+  });
+
+  let total = 0, pass = 0, failNoUse = 0, failOverUse = 0, horizonCount = 0, neutralCount = 0;
+
+  for (const tc of TEST_CASES) {
+    const { data: rows } = await db
+      .from("match_results")
+      .select("*")
+      .eq("date", tc.date)
+      .eq("league_code", tc.league)
+      .eq("status", "FINISHED")
+      .order("match_id", { ascending: true });
+
+    if (!rows || rows.length === 0) continue;
+
+    for (const row of rows) {
+      const { data: ed } = await db
+        .from("editorials")
+        .select("body")
+        .eq("date", tc.date)
+        .eq("league_code", tc.league)
+        .eq("kind", "match_caption_hist_v1")
+        .eq("slug", String(row.match_id))
+        .maybeSingle();
+
+      if (!ed) {
+        console.log(`  [${tc.date} ${tc.league}] ${row.home_team_short}-${row.away_team_short}: no v1 editorial found — skipping`);
+        continue;
+      }
+
+      const match = constructMatch(row);
+      let hh: TeamHistoryContext | undefined;
+      let ah: TeamHistoryContext | undefined;
+      let h2h: HeadToHeadMatch[] = [];
+      try {
+        [hh, ah, h2h] = await Promise.all([
+          getTeamHistory(db, match.homeTeam.id, tc.date),
+          getTeamHistory(db, match.awayTeam.id, tc.date),
+          getHeadToHead(db, match.homeTeam.id, match.awayTeam.id, tc.date),
+        ]);
+      } catch {
+        // proceed with empty context
+      }
+
+      const { striking } = computeStrikingInfo(
+        hh ?? emptyCtx(tc.date),
+        ah ?? emptyCtx(tc.date),
+        h2h,
+        tc.date,
+      );
+      const histRef = detectHistoryRef(ed.body);
+      const horizViol = detectHorizonViolations(ed.body);
+
+      let verdict: string;
+      if (horizViol.length > 0) { verdict = "FAIL_HORIZON"; horizonCount++; }
+      else if (striking && histRef) { verdict = "LIKELY_PASS"; pass++; }
+      else if (striking && !histRef) { verdict = "POTENTIAL_FAIL_NO_USE"; failNoUse++; }
+      else if (!striking && histRef) { verdict = "POTENTIAL_FAIL_OVER_USE"; failOverUse++; }
+      else { verdict = "NEUTRAL"; neutralCount++; }
+
+      total++;
+      const tag = verdict === "LIKELY_PASS" ? "✓" : verdict === "NEUTRAL" ? "·" : "⚠";
+      console.log(`  ${tag} [${tc.date} ${tc.league}] ${row.home_team_short}-${row.away_team_short}: ${verdict} (striking=${striking} histRef=${histRef})`);
+    }
+  }
+
+  const pct = total > 0 ? Math.round((pass / total) * 100) : 0;
+  const calibFail = failNoUse + failOverUse;
+  console.log("");
+  console.log(`Rescore (fixed detector):   ${total} editorials`);
+  console.log(`  LIKELY_PASS:     ${pass} (${pct}%)  [threshold: ≥60%] → ${pct >= 60 ? "✅ PASS" : "❌ FAIL"}`);
+  console.log(`  POTENTIAL_FAIL:  ${calibFail} (${failNoUse} no-use + ${failOverUse} over-use)  [threshold: ≤1] → ${calibFail <= 1 ? "✅ PASS" : "❌ FAIL"}`);
+  console.log(`  FAIL_HORIZON:    ${horizonCount}`);
+  console.log(`  NEUTRAL:         ${neutralCount}`);
 }
 
 // ---- Main ---------------------------------------------------------------
 
 async function main() {
-  console.log("eval-history-v1 — Phase 3.5 eval harness");
-  console.log(`${TEST_CASES.length} test cases, generating enriched + control captions`);
-  console.log("Writing to kind=match_caption_hist_v1 and match_caption_hist_v1_control\n");
+  console.log("eval-history-v1 — Phase 3.5 eval harness (RERUN with refined prompt)");
+  console.log(`${TEST_CASES.length} test cases`);
+  console.log("Writing to kind=match_caption_hist_v1_rerun and match_caption_hist_v1_rerun_control\n");
+
+  // Phase 1: rescore existing _hist_v1 rows with fixed keyword detector
+  await rescoreExistingV1();
+
+  // Phase 2: generate fresh rerun captions with refined prompt
+  console.log("\n" + "=".repeat(60));
+  console.log("PHASE 2: GENERATE fresh _rerun and _rerun_control captions");
+  console.log("=".repeat(60));
 
   const allResults: EvalResult[] = [];
 
@@ -751,7 +857,7 @@ async function main() {
   const enrichPct = Math.round((pass / allResults.length) * 100);
 
   console.log("\n" + "=".repeat(60));
-  console.log("EVAL SUMMARY");
+  console.log("RERUN EVAL SUMMARY");
   console.log("=".repeat(60));
   console.log(`Total pairs:          ${allResults.length}`);
   console.log(`LIKELY_PASS:          ${pass} (${enrichPct}%)  [threshold: 60%]`);

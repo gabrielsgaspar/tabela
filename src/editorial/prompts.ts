@@ -280,7 +280,18 @@ WORKED EXAMPLES
 ✗ BAD — streak of 2 treated as notable:
   Data: Team A on W×2
   Caption: "back-to-back wins for [Team A], who are finding momentum at the right time"
-  Fails: W×2 is below threshold; "finding momentum" is unsupported generic copy.`;
+  Fails: W×2 is below threshold; "finding momentum" is unsupported generic copy.
+
+✗ BAD — throwaway sub-threshold filler (two cases):
+  Data: Team A on L×2; one prior H2H meeting won by Team B this season
+  Caption (a): "Team A's run of two straight defeats continued against a resolute Team B."
+  Fails: L×2 is below the 4-game threshold. A two-game losing run is not editorial material.
+    If the streak length is below 4, omit it entirely — not as background context, not in
+    passing. The rule is: if it is not striking, it should not appear.
+  Caption (b): "Team B had won their only previous meeting at Team A this season."
+  Fails: When H2H data contains only 1 prior meeting, writing "only" draws attention to
+    the data's thinness. Fewer than 3 meetings do not establish a pattern. Omit the H2H
+    reference entirely rather than qualifying it.`;
 
 // ---- Team history formatting helpers ------------------------------------
 // Pure functions: accept data from MatchEditorialInput, return formatted strings
