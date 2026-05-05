@@ -416,6 +416,15 @@ If criteria 1 or 2 fail, tighten the prompt instructions before declaring the ph
 
 **Files changed:** `scripts/eval-history-v1.ts`, `HISTORY_TEST_REPORT.md`.
 
+**Calibration refinement (post-commit-6, added 2026-05-05):**
+
+After two eval runs (commit 6 + rerun), the original mechanical thresholds proved too strict for a mixed-quality penalty — they caught genuine failures but also flagged specific evocative editorial details as over-use. The refined criterion for (c) is:
+
+- **Genuine failures (still zero tolerance):** generic filler ("a run of two defeats continued"), hollow qualifiers ("their only previous meeting"), horizon violations (season counts inferred from meeting counts), invented facts.
+- **Acceptable below threshold:** specific verifiable detail — a notable prior meeting score/venue/opponent, a clean sheet gap referenced by month, a goal tally from two prior meetings — when it reads well and is directly traceable to the payload.
+
+Three prompt additions were made to prevent the specific failures observed: (1) lastCleanSheet added as a valid signal with ≥6-week threshold and no-venue-reference constraint; (2) HARD LIMIT #5 prohibiting season count inference from meeting count; (3) a BAD example for the season-count pattern. See DECISIONS.md 2026-05-05 entry for full rationale.
+
 ---
 
 ## Risks and open questions

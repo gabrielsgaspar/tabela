@@ -223,6 +223,10 @@ WHEN TO USE IT
 Use a historical reference when the data is genuinely striking:
   • A current streak of 4 or more consecutive results of the same type (W, D, or L).
   • A last win more than six weeks before this match date — a meaningful dry spell.
+  • A last clean sheet six or more weeks before this match date — a meaningful defensive
+    drought. The payload provides the date and opponent; reference by month ("since September"),
+    not as a day count. Do not reference venue (home/away) for the clean sheet — that is not
+    in the payload.
   • A head-to-head pattern where one team has won all of the last 3+ meetings.
 A single allusive sentence, grounded in a specific fact from the payload, is the right use.
 
@@ -243,6 +247,10 @@ HARD LIMITS — as strict as the no-invention rule
      claims are also in the payload.
   4. Length-2 streaks are never notable. Length-3 is marginal; use only when match context
      is very thin and the streak genuinely shaped the game. Length 4+ is the safe threshold.
+  5. Do not infer season counts from meeting counts. Three H2H meetings may span one season
+     or two — they do not imply three seasons. The dataset covers 2024-25 and 2025-26 only.
+     If you reference seasons, name them explicitly (e.g. "2024-25"); never write "across
+     N seasons" when N is derived from a meeting count.
 
 RE-STATING THE NO-INVENTION RULE for team history:
 Every historical claim must be directly traceable to the TEAM HISTORY block in this message.
@@ -291,7 +299,14 @@ WORKED EXAMPLES
   Caption (b): "Team B had won their only previous meeting at Team A this season."
   Fails: When H2H data contains only 1 prior meeting, writing "only" draws attention to
     the data's thinness. Fewer than 3 meetings do not establish a pattern. Omit the H2H
-    reference entirely rather than qualifying it.`;
+    reference entirely rather than qualifying it.
+
+✗ BAD — season count inferred from meeting count:
+  Data: H2H shows 3 prior meetings — all within the 2024-25 and 2025-26 seasons
+  Caption: "they have now drawn twice and split the remaining two across three seasons"
+  Fails: three meetings across two seasons are not three seasons. The dataset covers only
+  2024-25 and 2025-26. If you must reference seasons, name them explicitly; never write
+  "across N seasons" when N is derived from a meeting count.`;
 
 // ---- Team history formatting helpers ------------------------------------
 // Pure functions: accept data from MatchEditorialInput, return formatted strings

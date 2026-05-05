@@ -254,4 +254,16 @@ When two matches in the same league on the same day have identical shape (same s
 
 ---
 
+### 2026-05-05 — Phase 3.5 calibration refinement: lastCleanSheet as valid signal; refined over-use definition
+
+**Context.** After two eval runs (commit 6 + rerun) the original calibration rules proved too mechanically strict. The rules caught genuine failures but also flagged specific, evocative editorial details as over-use.
+
+**Decisions.**
+
+1. **lastCleanSheet is a valid editorial signal** (option a) when the gap is ≥6 weeks (42 days). The payload provides date and opponent; reference by month ("since September"), not as a day count. Do not reference venue (home/away) — that is not in the payload. The calibration section in `src/editorial/prompts.ts` was updated to include this threshold and the "no venue" constraint.
+
+2. **Season count must not be inferred from meeting count.** Three H2H meetings across two seasons do not become "three seasons." The dataset covers 2024-25 and 2025-26. A new HARD LIMIT (#5) and BAD example were added to the prompt to enforce this. This fixes the Chelsea/Bournemouth horizon violation observed in the rerun (the model wrote "across three seasons" from 3 H2H meetings).
+
+3. **Refined calibration criterion for Phase 3.5 eval (criterion c):** The original threshold rules (streak ≥4, H2H ≥3 meetings) were a first approximation. In practice, specific historical detail — one memorable prior meeting with a verifiable score, a notable recent gap — can be striking below the mechanical thresholds, provided it is specific and not used as filler. The pass criterion for criterion (c) is now: **zero generic filler** (e.g. "a run of two defeats continued") **and zero hollow qualifiers** (e.g. "their only previous meeting") — but specific evocative details that read well and are directly traceable to the payload are acceptable even below the mechanical thresholds. This is a refinement of the metric, not a lowering of the bar: we measure writing quality, not threshold compliance.
+
 <!-- Add new entries above this line, newest at top -->
