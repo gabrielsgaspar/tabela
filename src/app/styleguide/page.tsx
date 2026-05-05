@@ -21,6 +21,7 @@
  */
 
 import Masthead from "@/components/Masthead";
+import TeamCrest from "@/components/TeamCrest";
 import Footer from "@/components/Footer";
 import MatchCard, { MatchCardSkeleton } from "@/components/MatchCard";
 import EditorialBlock, {
@@ -532,14 +533,28 @@ export default async function StyleguidePage() {
         {/* ── 8. Audio Player ───────────────────────────────────────────────── */}
         <SectionHeader
           title="Audio Player"
-          description="Visual-only in Phase 4A. Play/pause icon toggles; no audio wired. Progress always 0%. Real playback comes in Phase 5."
+          description="Visual rewrite Phase 4A. Dark bg-pitch card, mustard play button, chapter nav. Skip ±15s and chapter buttons advance the display counter. No audio wired — rAF, scrub-by-touch, and real playback are Phase 5."
         />
 
         <div className="space-y-4 mb-8 max-w-lg">
-          <SubLabel>Default (paused)</SubLabel>
+          <SubLabel>With chapters (paused at 0:00 — skip and chapter buttons live)</SubLabel>
           <AudioPlayer
             title="Premier League Matchday 36 — Liverpool clinch the title at Anfield"
-            durationSec={272}
+            host="Marina Reis"
+            durationSec={264}
+            chapters={[
+              { t: 0, label: "Overview" },
+              { t: 62, label: "Arsenal" },
+              { t: 128, label: "City" },
+              { t: 194, label: "Rest" },
+            ]}
+          />
+
+          <SubLabel>Without chapters (no chapter nav, no tick marks)</SubLabel>
+          <AudioPlayer
+            title="Bundesliga Matchday 33 — Bayern seal the title in Munich"
+            host="Marina Reis"
+            durationSec={198}
           />
 
           <SubLabel>Skeleton</SubLabel>
@@ -547,6 +562,60 @@ export default async function StyleguidePage() {
 
           <SubLabel>Error state</SubLabel>
           <AudioPlayerError title="Premier League Matchday 36 — Liverpool clinch the title at Anfield" />
+        </div>
+
+        {/* ── 9. TeamCrest fallback shapes ──────────────────────────────────── */}
+        <SectionHeader
+          title="TeamCrest — fallback shapes"
+          description="Rendered when src is null or errored. Real crests use next/image from the Football-Data CDN. Shape + colour props apply to the fallback only."
+        />
+
+        <div className="flex flex-wrap items-end gap-6 mb-4">
+          <div>
+            <SubLabel>circle (default, no src)</SubLabel>
+            <div className="flex items-center gap-3 mt-2">
+              <TeamCrest src={null} alt="Arsenal" size={36} />
+              <TeamCrest src={null} alt="Liverpool" size={28} />
+              <TeamCrest src={null} alt="Manchester City" size={24} />
+            </div>
+          </div>
+          <div>
+            <SubLabel>roundel (inner ring)</SubLabel>
+            <div className="flex items-center gap-3 mt-2">
+              <TeamCrest src={null} alt="Arsenal" size={36} shape="roundel"
+                bg="#DB0007" fg="#FFFFFF" mono="A" />
+              <TeamCrest src={null} alt="Liverpool" size={28} shape="roundel"
+                bg="#C8102E" fg="#FFFFFF" mono="L" />
+            </div>
+          </div>
+          <div>
+            <SubLabel>shield (SVG path)</SubLabel>
+            <div className="flex items-center gap-3 mt-2">
+              <TeamCrest src={null} alt="Real Madrid" size={44} shape="shield"
+                bg="#00529F" fg="#FFFFFF" mono="R" />
+              <TeamCrest src={null} alt="Barcelona" size={44} shape="shield"
+                bg="#A50044" fg="#EDBB00" mono="B" />
+              <TeamCrest src={null} alt="Bayern" size={44} shape="shield"
+                bg="#DC052D" fg="#FFFFFF" mono="B" />
+            </div>
+          </div>
+          <div>
+            <SubLabel>serif mono (no shape prop)</SubLabel>
+            <div className="flex items-center gap-3 mt-2">
+              <TeamCrest src={null} alt="Juventus" size={36} mono="J"
+                bg="#000000" fg="#FFFFFF" />
+              <TeamCrest src={null} alt="PSG" size={36} mono="P"
+                bg="#004170" fg="#DA291C" />
+            </div>
+          </div>
+          <div>
+            <SubLabel>Real crest (CDN)</SubLabel>
+            <div className="flex items-center gap-3 mt-2">
+              <TeamCrest src="https://crests.football-data.org/57.png" alt="Arsenal" size={36} />
+              <TeamCrest src="https://crests.football-data.org/64.png" alt="Liverpool" size={36} />
+              <TeamCrest src="https://crests.football-data.org/86.png" alt="Real Madrid" size={36} />
+            </div>
+          </div>
         </div>
 
       </div>
