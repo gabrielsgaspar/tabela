@@ -142,4 +142,32 @@ original data-source decision (2026-05-03). Document the trigger event at that t
 
 ---
 
+### 2026-05-04 — Claude API concurrency: sequential leagues in Phase B
+
+**Decision.** In `src/trigger/pipeline.ts` Phase B, leagues are processed sequentially
+(`for...of`) rather than in parallel (`Promise.all`). Captions *within* a single league
+remain parallel.
+
+**Background.** Initial implementation wrapped all five league editorial jobs in a single
+`Promise.all`. On a day with matches in all leagues, this generates roughly 25 concurrent
+caption calls (≈5 per league × 5 leagues) plus 5 league overview calls — all firing at
+once. Each call consumes ≈800 tokens of input, putting the burst at ≈24k tokens. At the
+Claude Sonnet API org ceiling of **30k tokens per minute**, headroom is marginal and any
+variation in match count pushed the run into 429 errors. The first 7-day backfill produced
+four editorial failures from this cause.
+
+**Fix.** Sequential outer loop: one league finishes all its captions (`Promise.all` within)
+before the next league starts. Per-league burst: ≈4 captions × 800 tokens ≈ 3 200 tokens.
+Well within budget with no rate-limit errors observed after the change.
+
+**Alternatives considered.** Adding an explicit per-call sleep delay; chunking the
+`Promise.all` with a semaphore. Both add complexity with no benefit over the sequential
+approach, because leagues are a natural ordering boundary and the football API throttle
+(10 req/min) already imposes a 6+ second wait between league fetches in Phase A.
+
+**Revisit threshold.** If the org Claude token limit increases above 60k tokens/min, it is
+safe to reintroduce `Promise.all` across leagues. Document and benchmark before doing so.
+
+---
+
 <!-- Add new entries above this line, newest at top -->

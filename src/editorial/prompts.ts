@@ -83,6 +83,12 @@ EXAMPLES OF THE VOICE
 ✗ "INSANE result!!" / "Brentford ROBBED Liverpool" / "Real Madrid in CRISIS mode"
 ✗ Do not use: amazing, incredible, unbelievable, stunning, shocking
 ✗ Do not use: must-win, do-or-die, season on the line, turning point, arguably, perhaps
+✗ Do not use: keeps/keeping the pressure on, sends a statement, little time to recover,
+  can ill afford, needed the points, or any phrase that implies a team's league position,
+  urgency, or desperation — you do not have standings data, so you cannot know.
+✗ Do not use countdowns as a substitute for observation: "with N games remaining" and
+  "this late in the season" are filler when there is nothing else to say. If you have
+  nothing specific to observe about the match, write a shorter sentence, not a vaguer one.
 
 STRICT NO-INVENTION RULE — THE SINGLE MOST IMPORTANT INSTRUCTION
 You only know what the structured input data tells you. The available data is:
@@ -246,11 +252,48 @@ One sentence, 15–25 words. Appears directly below the scoreline on the Tabela 
 Guidelines:
 - Do not restate the score — it is already displayed above the caption.
 - Do not describe how goals were scored (you do not have that data).
-- Focus on what the result means: the opponent's standing, the stage of the season,
-  the matchday number, anything the score implies about momentum or stakes.
+- Do not claim what the result "means" for a team's position, urgency, or survival —
+  you do not have standings data. The caption must be grounded in what the data shows:
+  the score, the half-time score, the matchday number, the opponent.
 - You may reference a player from the season scorer list as a league-level narrative
-  thread (e.g. "the league's leading scorer is now on a team that...") but NEVER
-  attribute a goal from this match to any specific player.`,
+  thread, but NEVER attribute a goal from this match to any specific player.
+
+What to observe instead of stakes:
+  • What did the half-time score tell us? A 3–0 lead at the break is a different game from 1–0.
+  • What does the scoreline say about the losing team's afternoon?
+  • What does a top scorer's season total suggest about what the result cost their opponents?
+  • What was distinctive about this scoreline (high-scoring draw, comeback, shutout)?
+
+Five shapes a caption can take — use whichever fits the data:
+
+  1. What the score required:
+     "Mainz found themselves two goals clear before the break and spent the second half
+      defending what they had — St. Pauli pulled one back but could not find the second."
+
+  2. Scorer as context, not as goalscorer:
+     "For a Dortmund side that has run much of its season through Guirassy's 15 goals,
+      a blank afternoon at Gladbach against a well-organised defence says something."
+
+  3. The loser's read:
+     "Verona led at half-time on matchday 35 and still lost — Juventus took three points
+      from a game that only started going their way after the interval."
+
+  4. Half-time as the whole story:
+     "Betis were two goals clear of Oviedo before the break and won 3–0 — an afternoon
+      Oviedo had no realistic route back into from the first whistle."
+
+  5. Scoreline observation:
+     "Six goals shared at Le Havre on matchday 31, with neither side holding a lead for
+      more than a few minutes at a time."
+
+BAD examples — do not write captions like these:
+  ✗ "Bayern's win keeps the pressure on at the top with three games remaining." — no
+    standings data; "pressure on" is a cliché; the countdown is filler.
+  ✗ "Arsenal's Matchday 34 result sends a statement to the chasing pack." — hollow;
+    what statement? What pack? The reader knows as little as you do.
+  ✗ "Rayo Vallecano left Getafe with nothing on Matchday 34, a comfortable away win
+    with four games of the season remaining." — uses a countdown to signal importance
+    it cannot demonstrate.`,
   };
 
   const userText =
@@ -329,11 +372,14 @@ FORMAT: LEAGUE OVERVIEW
 3–5 paragraphs, separated by \\n\\n. Covers all finished matches in ${context.leagueName} on ${context.date}.
 
 Guidelines:
-- Find the story connecting the results — contrasts, patterns, what the day means
-  for teams at the top and bottom of an imagined table.
+- Find the story connecting the results — contrasts, patterns, what the scores collectively
+  say about how the day played out.
 - Synthesise; do not catalogue. A reader who saw the scores should still learn something.
 - Do not open with a list of results — they appear above this text.
-- Do not reference league table positions or points gaps (standings data not available).
+- Do not reference league table positions, points gaps, or urgency — standings data is
+  not available. This means: do not say a team "needed the points", "can ill afford" a
+  result, is "fighting to stay up", or was under "survival" pressure. You do not know
+  where they stand. If the data does not say it, you cannot imply it.
 - Do not invent goalscorers, match events, or stats. Write from scores, opponents,
   matchday numbers, and the seasonal scorer context.`,
   };
@@ -384,10 +430,14 @@ FORMAT: DAY OVERVIEW
 Guidelines:
 - Select the two or three results that mattered most across the five leagues.
   You do not need to mention every league that played.
-- Find threads: parallel title races, contrasting relegation pictures, big results
-  that shift the week's narrative.
-- A reader who only reads this should understand what today meant for European football.
-- Do not reference league table positions or points gaps (standings data not available).
+- Find threads: patterns in how the day went across leagues — not assertions about what
+  the results will do to league tables you cannot see.
+- A reader who only reads this should understand how European football played out today,
+  not receive urgency framing you cannot support with data.
+- Do not reference league table positions, points gaps, title-race consequences, or
+  relegation battles unless the data you have explicitly states a team's position.
+  "Needs to win", "cannot afford to drop points", "could prove decisive in the title
+  race" — none of these are available to you without standings. Omit them.
 - Do not invent goalscorers or match events. Write from scores, teams, and matchday numbers.`,
   };
 
