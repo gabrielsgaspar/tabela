@@ -170,4 +170,34 @@ safe to reintroduce `Promise.all` across leagues. Document and benchmark before 
 
 ---
 
+### 2026-05-05 — Trigger.dev attached schedules are not visible in /api/v1/schedules
+
+**Finding.** Schedules defined in code via `schedules.task({ cron: "..." })` are "attached schedules" — they are deployed as part of a task version and managed through the Trigger.dev dashboard environment, not the `/api/v1/schedules` REST endpoint. That endpoint only lists detached schedules created programmatically via `POST /api/v1/schedules`. Querying it for a code-defined schedule will always return `count: 0`, which is expected, not a missing-registration error.
+
+**Correct endpoint.** To verify an attached schedule exists, query the per-environment schedule directly:
+```
+GET /api/v1/schedules/{scheduleId}
+```
+or list all schedules for the environment using the same endpoint with the production key. The schedule ID is visible in the Trigger.dev dashboard and in the `/api/v1/schedules` response once you have the ID. To deactivate: `POST /api/v1/schedules/{scheduleId}/deactivate`.
+
+**Impact.** No code change needed. Documents the correct verification workflow for future deploys.
+
+---
+
+### 2026-05-05 — Docker credential helper required for pnpm trigger:deploy
+
+**Decision.** `pnpm trigger:deploy` (Trigger.dev cloud build via Depot) requires a working Docker credential configuration. On macOS with Docker Desktop not running, the default `~/.docker/config.json` contains `"credsStore": "desktop"` which references `docker-credential-desktop` — a binary only present when Docker Desktop is active. Without it, the Depot build fails at the image resolution step.
+
+**Workaround for local deploys.** Set `DOCKER_CONFIG` to a directory containing a minimal `config.json` with no `credsStore`:
+```bash
+mkdir -p /tmp/trigger-docker-config && echo '{"auths":{}}' > /tmp/trigger-docker-config/config.json
+DOCKER_CONFIG=/tmp/trigger-docker-config pnpm trigger:deploy
+```
+
+**For CI.** Either start Docker Desktop before the deploy step, or set `DOCKER_CONFIG` in the CI environment to a path with a clean config (no `credsStore`). Do not rely on `docker-credential-desktop` being available in headless environments.
+
+**Alternatives considered.** Permanently editing `~/.docker/config.json` to remove `credsStore` — rejected because it breaks all other Docker operations on the same machine.
+
+---
+
 <!-- Add new entries above this line, newest at top -->
