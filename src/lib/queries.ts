@@ -178,6 +178,113 @@ export async function getRecentMatchDaysForLeague(
   }));
 }
 
+// ── Team page queries ─────────────────────────────────────────────────────────
+
+export interface MatchResultRow {
+  match_id: number;
+  date: string;
+  league_code: string;
+  season: string;
+  matchday: number | null;
+  home_team_id: number;
+  home_team_name: string;
+  home_team_short: string;
+  away_team_id: number;
+  away_team_name: string;
+  away_team_short: string;
+  score_home: number | null;
+  score_away: number | null;
+  status: string;
+}
+
+/** Last N finished matches for a team (home or away), ordered date DESC. */
+export async function getTeamRecentMatches(
+  db: DB,
+  teamId: number,
+  limit = 5
+): Promise<MatchResultRow[]> {
+  const { data, error } = await db
+    .from("match_results")
+    .select(
+      "match_id, date, league_code, season, matchday, home_team_id, home_team_name, home_team_short, away_team_id, away_team_name, away_team_short, score_home, score_away, status"
+    )
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .eq("status", "FINISHED")
+    .order("date", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return data as MatchResultRow[];
+}
+
+/** Next N upcoming matches for a team, ordered date ASC. */
+export async function getTeamUpcomingMatches(
+  db: DB,
+  teamId: number,
+  today: string,
+  limit = 3
+): Promise<MatchResultRow[]> {
+  const { data, error } = await db
+    .from("match_results")
+    .select(
+      "match_id, date, league_code, season, matchday, home_team_id, home_team_name, home_team_short, away_team_id, away_team_name, away_team_short, score_home, score_away, status"
+    )
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .in("status", ["TIMED", "SCHEDULED"])
+    .gte("date", today)
+    .order("date", { ascending: true })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return data as MatchResultRow[];
+}
+
+/**
+ * Captions for a set of Football-Data.org match IDs.
+ * Editorials store match IDs as `slug = String(match_id)`.
+ */
+export async function getMatchCaptionsByMatchIds(
+  db: DB,
+  matchIds: string[]
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (matchIds.length === 0) return map;
+
+  const { data, error } = await db
+    .from("editorials")
+    .select("slug, body")
+    .eq("kind", "match_caption")
+    .in("slug", matchIds);
+
+  if (error || !data) return map;
+  for (const row of data) {
+    map.set(row.slug, row.body);
+  }
+  return map;
+}
+
+/**
+ * All FINISHED matches for a team in one season — used to compute season
+ * aggregate stats (wins, losses, goals, clean sheets) in JavaScript.
+ * PostgREST does not support arbitrary SQL aggregations; fetching the full
+ * season is safe because a team plays at most 38 league matches per season.
+ */
+export async function getTeamSeasonMatches(
+  db: DB,
+  teamId: number,
+  season: string
+): Promise<Pick<MatchResultRow, "home_team_id" | "away_team_id" | "score_home" | "score_away">[]> {
+  const { data, error } = await db
+    .from("match_results")
+    .select("home_team_id, away_team_id, score_home, score_away")
+    .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    .eq("status", "FINISHED")
+    .eq("season", season);
+
+  if (error || !data) return [];
+  return data;
+}
+
 /**
  * Match captions for a specific league and a set of dates.
  * Returns Map<matchId, captionBody>.
