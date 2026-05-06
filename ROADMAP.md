@@ -143,7 +143,12 @@ Build phases for Tabela. Mark `← CURRENT` next to the active phase. Each phase
 
 ## Phase 6 — Polish ← CURRENT
 
-**Goal:** the differentiators and nice-to-haves.
+> **Fresh session note:** Phase 6 starts with an audit, not new features. Open a
+> fresh session, read `CLAUDE.md`, `ROADMAP.md`, `DECISIONS.md`, then produce
+> `PHASE_6_AUDIT.md` per the spec we'll provide in the new session.
+
+**Goal:** audit what exists for launch-readiness, fix what surfaces, then execute the
+launch sequence (tier upgrade, voice swap, schedule unpause, first user).
 
 **Pre-launch sequence (ordered — complete in this order before unpausing the daily schedule):**
 
