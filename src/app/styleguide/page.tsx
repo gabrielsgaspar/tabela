@@ -537,36 +537,53 @@ export default async function StyleguidePage() {
         {/* ── 8. Audio Player ───────────────────────────────────────────────── */}
         <SectionHeader
           title="Audio Player"
-          description="Visual rewrite Phase 4A. Dark bg-pitch card, mustard play button, chapter nav. Skip ±15s and chapter buttons advance the display counter. No audio wired — rAF, scrub-by-touch, and real playback are Phase 5."
+          description="Phase 5 — wired to a real HTMLAudioElement. Click play, scrub the progress bar, use skip ±15 s and speed control. Test audio: MDN viper.mp3 (Creative Commons, ~45 s Jazz rock clip)."
         />
 
-        <div className="space-y-4 mb-8 max-w-lg">
-          <SubLabel>With chapters (paused at 0:00 — skip and chapter buttons live)</SubLabel>
-          <AudioPlayer
-            title="Premier League Matchday 36 — Liverpool clinch the title at Anfield"
-            host="Marina Reis"
-            durationSec={264}
-            chapters={[
-              { t: 0, label: "Overview" },
-              { t: 62, label: "Arsenal" },
-              { t: 128, label: "City" },
-              { t: 194, label: "Rest" },
-            ]}
-          />
+        {/*
+          DEV-ONLY TEST SURFACE
+          Uses the MDN HTML audio tutorial clip — a stable public-domain sample
+          from developer.mozilla.org's learning area GitHub repo. Do not use
+          this URL in any production code path; it is for styleguide review only.
+        */}
+        {(() => {
+          const TEST_AUDIO = "https://mdn.github.io/learning-area/html/multimedia-and-embedding/video-and-audio-content/viper.mp3";
+          return (
+            <div className="space-y-4 mb-8 max-w-lg">
+              <SubLabel>With chapters — live audio (play, scrub, speed, chapter nav)</SubLabel>
+              <AudioPlayer
+                title="Premier League Matchday 36 — Liverpool clinch the title at Anfield"
+                host="Marina Reis"
+                audioUrl={TEST_AUDIO}
+                chapters={[
+                  { t: 0, label: "Overview" },
+                  { t: 10, label: "First half" },
+                  { t: 25, label: "Reaction" },
+                  { t: 35, label: "Context" },
+                ]}
+              />
 
-          <SubLabel>Without chapters (no chapter nav, no tick marks)</SubLabel>
-          <AudioPlayer
-            title="Bundesliga Matchday 33 — Bayern seal the title in Munich"
-            host="Marina Reis"
-            durationSec={198}
-          />
+              <SubLabel>Without chapters — live audio (no chapter nav, no tick marks)</SubLabel>
+              <AudioPlayer
+                title="Bundesliga Matchday 33 — Bayern seal the title in Munich"
+                host="Marina Reis"
+                audioUrl={TEST_AUDIO}
+              />
 
-          <SubLabel>Skeleton</SubLabel>
-          <AudioPlayerSkeleton />
+              <SubLabel>No audioUrl → error state (production missing-audio case)</SubLabel>
+              <AudioPlayer
+                title="An episode without an audio URL"
+                durationSec={198}
+              />
 
-          <SubLabel>Error state</SubLabel>
-          <AudioPlayerError title="Premier League Matchday 36 — Liverpool clinch the title at Anfield" />
-        </div>
+              <SubLabel>Skeleton (loading)</SubLabel>
+              <AudioPlayerSkeleton />
+
+              <SubLabel>Error state (exported component — for parent-controlled error)</SubLabel>
+              <AudioPlayerError title="Premier League Matchday 36 — Liverpool clinch the title at Anfield" />
+            </div>
+          );
+        })()}
 
         {/* ── 9. TeamCrest fallback shapes ──────────────────────────────────── */}
         <SectionHeader
