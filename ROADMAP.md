@@ -124,22 +124,36 @@ Build phases for Tabela. Mark `← CURRENT` next to the active phase. Each phase
 
 ---
 
-## Phase 5 — Audio ← CURRENT
+## Phase 5 — Audio ⏸️ DEFERRED (B3/B4 pending)
 
 **Goal:** every editorial has an audio version users can play in-line.
 
-- [ ] Pick TTS provider (ElevenLabs default; OpenAI TTS as cheaper fallback). Document in `DECISIONS.md`.
-- [ ] Add TTS step to the daily task — generate mp3 per editorial.
-- [ ] Upload mp3 to Supabase Storage; persist URL.
-- [ ] Wire up `<audio>` player on the website.
+- [x] **A1** — Wire standalone `AudioPlayer` to a real `<audio>` element. Verified at `/styleguide`.
+- [x] **A2** — Wire `StickyMiniPlayer` + `ListenClient` to real audio. Verified at `/listen` locally.
+- [x] **B1** — Build synthesis layer (`pre-process.ts`, `synthesize.ts`, `upload.ts`, Phase D in pipeline). Local end-to-end test confirmed: synthesis → Supabase Storage → `audio_url` populated → public URL returns `200 audio/mpeg`.
+- [x] **B2** — Trigger.dev Production redeploy (`20260505.3 → 20260506.1`). Schedule confirmed paused. Phase D wired.
+- [⏸️] **B3** — Production audio verification run. **Deferred.** Blocked by ElevenLabs free-tier abuse detection on Trigger.dev container IPs (`detected_unusual_activity`). Requires Creator tier upgrade (~$22/mo). ~30 min of operational work when upgrade happens.
+- [⏸️] **B4** — ISR fix for `/listen` (`revalidate = 3600` or `force-dynamic`). **Deferred.** The page was prerendered when no `audio_url` rows existed; it will show the empty state even after B3 populates rows until this is applied. ~5 min fix. Sequence: apply after B3 confirms rows exist.
 
-**Done when:** every editorial on the site has a working play button.
+**Known limitation at close:** production audio synthesis is blocked by the ElevenLabs free-tier IP restriction. All code is correct and verified locally. The `/listen` page shows the empty state in production because no `audio_url` rows exist. The deferral is operational, not architectural.
+
+**Done when:** B3 and B4 complete (after Creator tier upgrade). ✓ Everything else is done.
 
 ---
 
-## Phase 6 — Polish
+## Phase 6 — Polish ← CURRENT
 
 **Goal:** the differentiators and nice-to-haves.
+
+**Pre-launch sequence (ordered — complete in this order before unpausing the daily schedule):**
+
+1. [ ] **ElevenLabs Creator tier upgrade** ($22/mo) — required before any production synthesis. Bypasses free-tier IP abuse detection on container environments. See DECISIONS.md 2026-05-06 entry for full context.
+2. [ ] **Phase 5 B3: production audio one-shot** — trigger `daily-report-one-shot` for a recent matchday, confirm `audio_url` populated on all `day_overview` + `league_overview` rows, curl one mp3 URL for `200 audio/mpeg`.
+3. [ ] **Phase 5 B4: `/listen` ISR fix** — add `export const revalidate = 3600` (or `force-dynamic`) to `src/app/listen/page.tsx`. Vercel redeploy. Confirm `/listen` shows real episodes on the live site. Remove the dev-only MDN test audio block.
+4. [ ] **Production voice swap** — replace `ELEVENLABS_VOICE_ID` in Trigger.dev Production from Sarah (`EXAVITQu4vr4xnSDxMaL`) to the chosen production voice. Test before unpausing schedule.
+5. [ ] **Unpause daily schedule** (`sched_wqapcm3eta5zi6huqsm83`) in Trigger.dev dashboard — only after steps 1–4 are done and at least one production audio run has been verified.
+
+**Phase 6 features:**
 
 - [ ] "Follow a team" — auth via Supabase Auth, weekly digest job.
 - [ ] Country flag filter UI on the home page.

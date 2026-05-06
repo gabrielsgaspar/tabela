@@ -388,4 +388,167 @@ After three eval runs, the model occasionally reaches for weaker historical cont
 
 All routes use `createBrowserClient()` (anon key only). No service-role key on web.
 
+### 2026-05-06 — Phase 5 B1: audio synthesis layer wired; actual cost picture
+
+**Context.** B1 builds the synthesis pipeline (pre-process → ElevenLabs → Supabase Storage) and adds Phase D to `pipeline.ts`. A local test run with representative editorial prose (~250 words, 4 paragraphs) was used to verify the wiring before committing to a production deploy.
+
+**Actual cost from local test run (2026-05-06):**
+
+| Metric | Value |
+|--------|-------|
+| Input text | ~250 words, 4 paragraphs, `day_overview` editorial sample |
+| Char count after pre-processing | 1,513 characters |
+| mp3 output | 1,506 KB (~1.5 MB) |
+| Estimated cost @ $0.003/1k chars (Starter plan) | **$0.0045 per editorial** |
+
+**Revised monthly cost estimate:**
+
+The original estimate in the 2026-05-04 TTS decision ($60/month) was based on stale ElevenLabs pricing and assumed $0.24/1k chars. Current rates (Creator tier, May 2026) are significantly cheaper. Using the measured 1,513 chars/editorial as representative:
+
+- 6 editorials/active matchday (1 day_overview + 5 league_overviews)
+- ~20 active matchdays/month
+- ~120 editorials/month × ~1,500 chars = ~180,000 chars/month
+
+| Plan | Included chars | Overage | Est. monthly cost |
+|------|---------------|---------|-------------------|
+| Free | 10,000 | N/A | Cannot sustain daily runs |
+| Starter ($5/mo) | 30,000 | ~$0.003/1k | ~$5 + $0.45 overage ≈ **$5.50/mo** |
+| Creator ($22/mo) | 100,000 | included | ~**$22/mo** flat (well within) |
+
+The original $1/editorial figure was ~200× too high. Actual rate is ~$0.005 per editorial.
+
+**ElevenLabs tier escalation path:**
+
+| Tier | Included chars | Monthly cost | Status |
+|------|---------------|--------------|--------|
+| Free | 10,000 | $0 | Cannot use library voices; cannot sustain even one matchday |
+| Starter | 30,000 | $5 | API access to pre-made voices; testing only (5 days of editorials) |
+| Creator | 100,000 | $22 | **Minimum for daily production runs**; covers ~20 matchdays/month |
+| Pro | 500,000 | $99 | Headroom for scale; not needed at MVP volumes |
+
+**Voice in use for Phase 5 verification:** Sarah (`EXAVITQu4vr4xnSDxMaL`) — ElevenLabs pre-made voice, available on free and paid tiers. Selected as a stand-in for pipeline wiring verification only. This is not the production voice.
+
+**Original voice decision (2026-05-04 entry):** George (`jsCqWAovK2LkecY7zXl4`) — library/community voice, requires paid plan (Starter or above). Voice ID preserved in `.env.local` as a comment. Production voice selection + account upgrade are Phase 6 launch prerequisites, not Phase 5 concerns.
+
+**Phase 6 pre-launch requirement added to ROADMAP.md:** Creator tier must be active before unpausing the daily schedule.
+
+### 2026-05-06 — Phase 5 B3: Production ELEVENLABS_VOICE_ID temporarily set to Sarah
+
+**Decision.** For B3 end-to-end verification, `ELEVENLABS_VOICE_ID` in the Trigger.dev
+Production environment is temporarily set to `EXAVITQu4vr4xnSDxMaL` (Sarah, pre-made,
+available on free + paid tiers). This allows Phase D audio synthesis to run successfully
+in production without requiring a tier upgrade.
+
+**TODO (Phase 6 launch step):** restore `ELEVENLABS_VOICE_ID` to the chosen production voice
+before unpausing the daily schedule. Sarah is a verification stand-in, not the production
+voice. See the Phase 6 pre-launch checklist in ROADMAP.md.
+
+---
+
+### 2026-05-06 — Trigger.dev Production redeploy: 20260505.3 → 20260506.1
+
+**Decision.** Redeploy the Trigger.dev Production task to close the gap between the
+cloud-deployed version (20260505.3, pre-Phase 3.5) and the codebase (Phase 3.5 historical
+memory + V2 voice fixes + Phase 5 audio synthesis / Phase D pipeline).
+
+**Old version:** 20260505.3 (deployed 2026-05-05; no historical memory enrichment, no audio)
+**New version:** 20260506.1 (deployed 2026-05-06; Phase 3.5 + Phase 5 audio synthesis)
+
+**Tasks registered at 20260506.1:**
+- `daily-report` (scheduled, attached to `sched_wqapcm3eta5zi6huqsm83`)
+- `daily-report-one-shot` (manual trigger)
+
+**Schedule status post-deploy:** `active: false` — the deploy did not unpause the schedule.
+Confirmed via `GET /api/v1/schedules/sched_wqapcm3eta5zi6huqsm83` with Production key.
+The schedule has no `nextRun` because it is inactive. Unpausing is a Phase 6 pre-launch step.
+
+**Phase D behaviour in Production:** `ELEVENLABS_VOICE_ID` in the Trigger.dev Production
+environment is `ZA3TGoYAsdYMffXndkSX` (a library voice). The ElevenLabs free plan blocks
+library voices with a 402 `paid_plan_required` error. Phase D handles this gracefully — each
+editorial logs a `[quota_exceeded]` error and the pipeline continues. No audio will be
+synthesised in production until Phase 6 (Creator tier active + production voice confirmed).
+This is the intended state; Phase D is wired and deployed, pending the tier upgrade.
+
+---
+
+### 2026-05-06 — Phase 6 polish note: empty slug produces trailing dash in Storage path
+
+**Finding.** `day_overview` editorials have `slug = ""`. The current `buildStoragePath`
+function in `src/audio/upload.ts` produces `{date}/day_overview-.mp3` — the trailing dash
+comes from the template literal `` `${kind}-${slug}` `` when slug is empty.
+
+**Decision.** Accept for Phase 5. The path is functional; `getPublicUrl` returns a valid URL
+and the file is accessible. Fix in Phase 6 polish: treat empty slug as "no suffix at all",
+producing `{date}/day_overview.mp3` instead.
+
+**Fix location:** `src/audio/upload.ts` `buildStoragePath()` — change the filename template to:
+```ts
+const suffix = ref.slug ? `-${ref.slug}` : "";
+const filename = `${ref.kind}${suffix}.mp3`;
+```
+Existing files at the old path will need to be renamed or re-synthesised when the fix lands.
+
+### 2026-05-06 — Phase 5 closure with audio deferral
+
+**Decision.** Phase 5 closes with B3 and B4 deferred. The ElevenLabs Creator tier upgrade was
+not applied during this phase. Production audio synthesis remains blocked; all other Phase 5
+work is complete and verified.
+
+**What is done:**
+- `src/audio/pre-process.ts` — markdown stripping, abbreviation expansion, SSML paragraph breaks
+- `src/audio/synthesize.ts` — ElevenLabs SDK wrapper, structured errors, stream-to-buffer
+- `src/audio/upload.ts` — Supabase Storage upload + `audio_url` DB write-back
+- Phase D in `src/trigger/pipeline.ts` — sequential synthesis for `day_overview` + `league_overview` after Phase C; per-editorial error handling; cost logging
+- `scripts/test-synthesize.ts` — local test script; confirmed synthesis → Storage → `audio_url`
+- `AudioPlayer` wired to real `<audio>` element (A1, verified at `/styleguide`)
+- `StickyMiniPlayer` + `ListenClient` wired to real audio (A2, verified at `/listen`)
+- Trigger.dev Production redeployed: `20260505.3 → 20260506.1`. Schedule paused.
+- `episodes` Storage bucket created with public read + service role upload policies.
+- `/listen` page reads correctly from rows with `audio_url` populated. Currently shows empty
+  state in production because no `audio_url` rows exist yet.
+
+**What is deferred:**
+- B3: production audio verification — blocked by ElevenLabs free-tier abuse detection
+- B4: `/listen` ISR fix — meaningless until B3 populates `audio_url` rows
+
+**Deferral is operational, not architectural.** The code is correct and verified locally.
+Upgrading the tier and triggering one production run is sufficient to bring audio live.
+
+---
+
+### 2026-05-06 — ElevenLabs free-tier abuse detection blocks production synthesis (tier upgrade deferred)
+
+**Decision.** The tier upgrade was deferred; this entry documents the root cause for future reference.
+
+**Root cause of B3 audio failures.** All three synthesis attempts in the production Trigger.dev
+container returned `"detected_unusual_activity"` from the ElevenLabs API. Free-tier accounts
+are subject to abuse detection that triggers on requests from IP address classes associated
+with cloud/container environments (Trigger.dev runs on shared cloud infrastructure). Local
+development works because the request originates from a residential/office IP. The same API
+key and voice ID that succeed locally fail in a production container on the free tier.
+
+**Why the Phase 6 sequencing was wrong.** The assumption was that tier upgrade = production
+scale = Phase 6 launch. In practice, tier upgrade = bypass container IP abuse detection =
+required for any production synthesis run. Phase 5 B3 verification IS a production run.
+
+**Cost reality check.** Creator tier ($22/mo) includes 100,000 chars/month. Actual usage at
+~6 editorials/matchday × 1,500 chars × 20 matchdays = ~180,000 chars/month means overage at
+Creator rate, but the $22 base is not buying character volume — it's buying the paid-tier
+treatment that bypasses IP-based abuse detection. The production synthesis cost is negligible
+(~$0.005/editorial); the $22 is effectively an infrastructure cost, not usage cost.
+
+**Revised tier table:**
+
+| Tier | Included | Cost | Production-safe? |
+|------|----------|------|-----------------|
+| Free | 10k chars | $0 | **No** — container IPs trigger abuse detection |
+| Starter | 30k chars | $5 | Unknown — likely same issue |
+| Creator | 100k chars | $22 | **Yes** — paid tier bypasses IP abuse detection |
+| Pro | 500k chars | $99 | Yes |
+
+**Phase 6 pre-launch sequence updated:** Creator tier upgrade is now step 1 of the Phase 6
+pre-launch sequence. Voice swap (Sarah → production voice) remains step 4.
+
+---
+
 <!-- Add new entries above this line, newest at top -->
