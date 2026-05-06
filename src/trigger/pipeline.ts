@@ -49,6 +49,10 @@ import {
   type HeadToHeadMatch,
   type SeasonStats,
 } from "../editorial/team-history";
+import { preProcess } from "../audio/pre-process";
+import { synthesize, SynthesisError } from "../audio/synthesize";
+import { uploadAudio } from "../audio/upload";
+import type { EditorialRef } from "../audio/types";
 
 // ---- Season derivation ---------------------------------------------------
 
@@ -134,6 +138,8 @@ export interface PipelineResult {
   leaguesWithMatches: LeagueCode[];
   editorialsWritten: number;
   editorialsFailed: number;
+  audioSynthesised: number;
+  audioFailed: number;
 }
 
 export async function runDailyPipeline(date: string): Promise<PipelineResult> {
@@ -142,6 +148,8 @@ export async function runDailyPipeline(date: string): Promise<PipelineResult> {
   const leaguesDataFailed: LeagueCode[] = [];
   let editorialsWritten = 0;
   let editorialsFailed = 0;
+  let audioSynthesised = 0;
+  let audioFailed = 0;
 
   // ------------------------------------------------------------------
   // Phase A: Fetch + persist (sequential — rate limiter in client.ts
@@ -219,6 +227,8 @@ export async function runDailyPipeline(date: string): Promise<PipelineResult> {
       leaguesWithMatches,
       editorialsWritten,
       editorialsFailed,
+      audioSynthesised,
+      audioFailed,
     };
   }
 
@@ -362,6 +372,72 @@ export async function runDailyPipeline(date: string): Promise<PipelineResult> {
     console.error(`[day] Day overview failed: ${msg}`);
   }
 
+  // ------------------------------------------------------------------
+  // Phase D: Audio synthesis — synthesise day_overview + league_overviews
+  // that were written during phases B/C for this date.
+  //
+  // Sequential per editorial: ElevenLabs has a per-minute character limit
+  // and audio files can be large; no benefit to parallelism here.
+  //
+  // Cost logging: ElevenLabs charges per character. We log char count per
+  // editorial at 0.003 USD/1k chars (Starter plan rate) so spend is visible
+  // in Trigger.dev run logs without querying the ElevenLabs dashboard.
+  // ------------------------------------------------------------------
+
+  // Fetch the day_overview and all league_overviews written for this date.
+  const { data: audioTargets, error: audioFetchErr } = await db
+    .from("editorials")
+    .select("id, date, kind, slug, headline, body, league_code")
+    .eq("date", date)
+    .in("kind", ["day_overview", "league_overview"])
+    .is("audio_url", null) // only rows that don't already have audio
+    .order("kind", { ascending: true }); // day_overview before league_overview
+
+  if (audioFetchErr) {
+    console.error(`[audio] Failed to fetch synthesis targets: ${audioFetchErr.message}`);
+  } else if (!audioTargets || audioTargets.length === 0) {
+    console.log(`[audio] No synthesis targets for ${date} — skipping Phase D.`);
+  } else {
+    // ElevenLabs rate: ~$0.003 per 1k characters (Starter plan).
+    const COST_PER_1K_CHARS = 0.003;
+
+    for (const row of audioTargets) {
+      const label = row.kind === "day_overview"
+        ? "day"
+        : `${row.kind}/${row.slug}`;
+
+      try {
+        const { ssml, charCount } = preProcess(row.body ?? "");
+        const estimatedCost = (charCount / 1000) * COST_PER_1K_CHARS;
+        console.log(
+          `[audio] ${label}: ${charCount} chars (~$${estimatedCost.toFixed(4)}) — synthesising…`,
+        );
+
+        const { mp3Buffer, bytes } = await synthesize({ text: ssml });
+        console.log(`[audio] ${label}: ${(bytes / 1024).toFixed(1)} KB received.`);
+
+        const ref: EditorialRef = {
+          id: row.id,
+          date: row.date,
+          kind: row.kind as "day_overview" | "league_overview",
+          slug: row.slug ?? "",
+        };
+        const { publicUrl } = await uploadAudio(mp3Buffer, ref);
+        audioSynthesised++;
+        console.log(`[audio] ${label}: uploaded → ${publicUrl}`);
+      } catch (err) {
+        audioFailed++;
+        const msg = err instanceof SynthesisError
+          ? `[${err.kind}] ${err.message}`
+          : err instanceof Error
+          ? err.message
+          : String(err);
+        console.error(`[audio] ${label}: synthesis failed — ${msg}`);
+        // Non-fatal: continue with remaining editorials.
+      }
+    }
+  }
+
   return {
     date,
     leaguesDataOk,
@@ -369,5 +445,7 @@ export async function runDailyPipeline(date: string): Promise<PipelineResult> {
     leaguesWithMatches,
     editorialsWritten,
     editorialsFailed,
+    audioSynthesised,
+    audioFailed,
   };
 }

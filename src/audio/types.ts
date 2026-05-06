@@ -9,8 +9,28 @@ export interface SynthesisInput {
 }
 
 export interface SynthesisResult {
-  buffer: Buffer;
+  mp3Buffer: Buffer;
   contentType: "audio/mpeg";
+  bytes: number;
+  // Rough estimate based on average 150 wpm spoken rate. Populated after
+  // upload when we get the real duration from audio metadata; set to
+  // undefined here because ElevenLabs doesn't return duration directly.
+  durationEstimate?: number;
+}
+
+export interface PreProcessResult {
+  // Text ready to send to ElevenLabs (SSML breaks inserted, abbreviations
+  // expanded, markdown stripped).
+  ssml: string;
+  // Character count used for cost estimation (chars × rate).
+  charCount: number;
+}
+
+export interface UploadResult {
+  publicUrl: string;
+  // Storage path relative to bucket root, e.g. "episodes/2026-05-06/day_overview-.mp3"
+  storagePath: string;
+  bytes: number;
 }
 
 // Identifies a persisted editorial row — used to name the Storage file
