@@ -274,4 +274,73 @@ After three eval runs, the model occasionally reaches for weaker historical cont
 
 **Acceptable given:** zero factual errors across 31 pairs, zero horizon violations, 65% enrichment rate, and all other flagged cases being either detector false negatives (good captions the keyword check missed) or specific evocative detail that reads well under the refined calibration criterion.
 
+### 2026-05-06 — First Vercel production deploy (Phase 4B, Commits 1–2)
+
+**Deployed URL:** https://tabela-topaz.vercel.app
+
+**Deployment ID:** `dpl_9B2MH1N7PmknAHn4RhKzmgT6VnQq` (second deploy, with real APP_URL)
+
+**Build summary:**
+- Next.js 16.2.4 / Turbopack — compiled in 4.7 s, TypeScript clean
+- Route `/` is dynamic (ƒ) — server-rendered on demand, reads Supabase via anon client
+- Route `/styleguide` is static (○) — no dynamic data, prerendered at build time
+- Build machine: 2 cores / 8 GB, Washington D.C. (iad1), ~32 s total
+
+**Environment variables set in Vercel (production + development scopes):**
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — anon key (RLS-governed, safe to expose)
+- `NEXT_PUBLIC_APP_URL` — `https://tabela-topaz.vercel.app`
+
+`SUPABASE_SERVICE_ROLE_KEY` is explicitly absent from Vercel. Confirmed via `vercel env ls` before deploy. The website is read-only via the anon client; the service role key lives only in Trigger.dev's environment.
+
+**Preview scope:** preview env vars not set (newer Vercel CLI 53.x requires explicit `--git-branch` for preview scope and stdin piping for non-interactive add; `--yes` alone does not bypass this). Preview deployments will lack Supabase credentials until set via the Vercel dashboard. Not blocking for an MVP with no PR workflow.
+
+**Live verification (post-deploy):**
+- All 5 league groups render; FT results, captions, race watch, stat leaders all present
+- `?league=la-liga` filter returns only La Liga group, 55 KB vs 153 KB full page — server-side filter confirmed working on Vercel's Linux build
+- No `service_role` string in the rendered HTML
+
+**Deploy surprises / notes for future redeploys:**
+- `vercel link --yes` created the project successfully but reported a GitHub connection error (400 — Login Connection required). The deploy via `vercel --prod` (file upload, not GitHub Actions) works without it. Connect GitHub in the Vercel dashboard to enable automatic PR deploys.
+- pnpm@10.x used on Vercel (project creation date heuristic). Local uses same major. No lockfile mismatch.
+- `supabase` CLI package downloads its binary at postinstall, adding ~10 s to install. Not avoidable without removing the dev dependency; acceptable for MVP.
+
+---
+
+### 2026-05-06 — Phase 4B Commits 3+4 deployed — league and team pages live
+
+**Decision.** Deploy league pages (`/leagues/[slug]`) and team pages (`/teams/[id]`) together as the second production deployment.
+
+**Deployment ID:** `dpl_21e4G1bgmY17UMKL4NLjRvRaBCgM`
+
+**Deployed URL:** https://tabela-topaz.vercel.app (alias unchanged)
+
+**Build summary:**
+- 5 routes: `/` (dynamic), `/_not-found` (static), `/leagues/[slug]` (dynamic), `/styleguide` (static), `/teams/[id]` (dynamic)
+- Compiled in 5.8 s, TypeScript clean, zero ESLint warnings
+- Build machine: 2 cores / 8 GB, Washington D.C. (iad1)
+
+**Env vars:** no changes — same `NEXT_PUBLIC_` trio as Commits 1–2. Neither route introduces new external dependencies or secrets. `SUPABASE_SERVICE_ROLE_KEY` remains absent from Vercel.
+
+**Live verification (post-deploy):**
+- `/leagues/premier-league` — 200, h1 present, standings grid rendered, FullStandingsTable in HTML
+- `/leagues/la-liga` — 200, h1 present (confirms dynamic slug routing)
+- `/teams/57` (Arsenal) — 200, h1 present, season stats panel rendered, breadcrumb links back to `/leagues/premier-league`
+- `/teams/65` (Man City) — 200, h1 present, season stats panel rendered
+- `/teams/9999999` — 404 (no match_results rows → `notFound()`)
+- `/leagues/garbage` — 404 (`leagueBySlug` returns undefined → `notFound()`)
+- Team page links in standings table: inside `{isExpanded && …}` (client-side only) — not in SSR payload; confirmed correct at route level (teams/57, teams/65 return 200)
+
+**Architectural choices locked in this deploy:**
+
+- **Season aggregate computed in JS, not SQL.** PostgREST does not support arbitrary `GROUP BY` aggregations. Rather than adding a Postgres function (migration overhead), the team page fetches all FINISHED season matches for the team (max 38 rows) and computes wins/draws/losses/goals/clean sheets in JavaScript. Comment in `queries.ts` explains this. Upgrade path: add a Postgres aggregate view if the calculation grows in complexity.
+
+- **No kickoff time on team recent-matches MatchCards.** `match_results` stores `date` (DATE only) — the kickoff time is in `match_days.payload` (JSONB). Joining that for the team page would require an extra query per match or a denormalized column. For Phase 4B, `kickoffTime={null}` is passed; cards fall back to the scheduled-state layout gracefully. If kickoff times on the team page become important, add a `kickoff_utc` column to `match_results` populated by the pipeline.
+
+- **Ripple effects section absent.** Computing which other matches affected a team's standing requires comparing pre- and post-matchday standings tables — a multi-query diff not yet supported. Section omitted with a comment; Phase 6 candidate.
+
+- **Team-specific editorials deferred.** "Week in context" uses the league's `league_overview` editorial. Team-specific weekly briefs require a pipeline change (new `kind = 'team_weekly'` editorial generation). Phase 6.
+
+**Daily report schedule:** remains paused. Trigger.dev pipeline not redeployed with this build. Enabling the schedule requires `pnpm trigger:deploy` to push Phase 3.5 changes to Trigger.dev's cloud before re-enabling.
+
 <!-- Add new entries above this line, newest at top -->
