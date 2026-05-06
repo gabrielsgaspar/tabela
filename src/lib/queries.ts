@@ -285,6 +285,41 @@ export async function getTeamSeasonMatches(
   return data;
 }
 
+// ── Listen page query ─────────────────────────────────────────────────────────
+
+export interface ListenEpisode {
+  id: number;
+  date: string;
+  kind: string;
+  league_code: string | null;
+  headline: string | null;
+  body: string;
+  audio_url: string | null;
+  slug: string;
+}
+
+/**
+ * Editorials with audio_url set, ordered date DESC, capped at 60.
+ * Both day_overview and league_overview kinds are included.
+ *
+ * Filter cap note (from PLAN.md §3): 60 rows covers ~12 weeks of daily
+ * + league overviews. When the dataset exceeds ~200 rows, move to
+ * server-side filtering with URL-driven state. For v1 all filter logic
+ * (kind, league, search text) is applied client-side on this dataset.
+ */
+export async function getListenEpisodes(db: DB): Promise<ListenEpisode[]> {
+  const { data, error } = await db
+    .from("editorials")
+    .select("id, date, kind, league_code, headline, body, audio_url, slug")
+    .not("audio_url", "is", null)
+    .in("kind", ["day_overview", "league_overview"])
+    .order("date", { ascending: false })
+    .limit(60);
+
+  if (error || !data) return [];
+  return data as ListenEpisode[];
+}
+
 /**
  * Match captions for a specific league and a set of dates.
  * Returns Map<matchId, captionBody>.
