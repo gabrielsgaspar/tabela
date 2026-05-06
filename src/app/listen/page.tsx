@@ -4,7 +4,7 @@
 //   1. Masthead
 //   2. Breadcrumb subnav (Home / Listen)
 //   3. Hero section — latest audio-bearing editorial + big play button
-//      Empty state if no episodes with audio_url exist yet (expected in Phase 4B)
+//      Empty state if no episodes with audio_url exist yet
 //   4. ListenClient (client boundary) — filters + episode list + StickyMiniPlayer
 //   5. Footer
 //
@@ -14,10 +14,10 @@
 //           AND kind IN ('day_overview', 'league_overview')
 //         ORDER BY date DESC LIMIT 60
 //
-// Phase 4B note: audio_url is null for all current editorial rows — the
-// ElevenLabs synthesis pipeline (Phase 5) has not run. The page renders
-// a graceful "coming soon" hero and no episode list. All structural
-// components are in place for Phase 5 to activate.
+// DEV NOTE (Phase 5 A2): when NODE_ENV === 'development' and no real audio_url
+// rows exist yet (pre-B3), the page injects the MDN test clip URL into recent
+// editorial rows so the wired audio can be exercised locally. This block has
+// no effect once real audio_url rows exist or in production.
 
 import Link from "next/link";
 import Masthead from "@/components/Masthead";
@@ -146,7 +146,31 @@ function HeroEpisode({
 
 export default async function ListenPage() {
   const db = createBrowserClient();
-  const episodes = await getListenEpisodes(db);
+  let episodes = await getListenEpisodes(db);
+
+  // DEV-ONLY: inject test audio URLs when no real audio_url rows exist yet.
+  // Allows A2 wiring to be verified before B1+B3 populate real URLs.
+  // Remove once B3 confirms real audio_url rows are in the DB.
+  if (process.env.NODE_ENV === "development" && episodes.length === 0) {
+    const DEV_AUDIO =
+      "https://mdn.github.io/learning-area/html/multimedia-and-embedding/video-and-audio-content/viper.mp3";
+    const { data: devRows } = await db
+      .from("editorials")
+      .select("id, date, kind, league_code, headline, body, audio_url, slug")
+      .in("kind", ["day_overview", "league_overview"])
+      .order("date", { ascending: false })
+      .limit(8);
+    if (devRows && devRows.length > 0) {
+      episodes = devRows.map((row) => ({
+        ...row,
+        audio_url: DEV_AUDIO,
+        body: row.body ?? "",
+        headline: row.headline ?? null,
+        league_code: row.league_code ?? null,
+      }));
+    }
+  }
+
   const latestEpisode = episodes[0] ?? null;
 
   return (

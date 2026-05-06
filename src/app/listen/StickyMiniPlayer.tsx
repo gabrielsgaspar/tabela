@@ -1,13 +1,22 @@
 "use client";
 
-// StickyMiniPlayer — fixed bottom bar that appears when an episode is playing.
+// StickyMiniPlayer — fixed bottom bar that appears when an episode is loaded.
 //
-// Phase 4B — visual-only playback: the rAF timer advances `t` but no real
-// <audio> element exists. Phase 5 will wire the audio_url to an HTMLAudioElement.
+// Phase 5: wired to a real <audio> element owned by ListenClient.
 //
-// Controls: play/pause · progress bar · time display · speed (1×/1.25×/1.5×/2×) · close.
+// This component is pure view + event source:
+//   · It reads player state (episode, playing, t, dur, speed) from props.
+//   · It dispatches PlayerActions back to ListenClient via `dispatch`.
+//   · Seeking is handled via the `onSeek(t)` prop — ListenClient translates
+//     that into audio.currentTime imperatively, then dispatches setTime.
+//   · The rAF timer loop from Phase 4B is removed; time comes from
+//     ontimeupdate events in ListenClient.
+//
+// Visibility: renders while an episode is selected (playing or paused).
+// The sticky bar stays visible after pause so the user can resume.
+// Dispatching 'close' removes the episode from state and hides the bar.
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import EpisodeArt from "./EpisodeArt";
 import type { ListenEpisode } from "@/lib/queries";
 
@@ -27,30 +36,44 @@ export type PlayerAction =
   | { type: "toggle" }
   | { type: "close" }
   | { type: "cycleSpeed" }
-  | { type: "tick"; dt: number };
+  | { type: "setTime"; t: number }
+  | { type: "setDur"; dur: number }
+  | { type: "ended" };
 
 export function playerReducer(state: PlayerState, action: PlayerAction): PlayerState {
   switch (action.type) {
     case "select":
       if (state.episode?.id === action.episode.id) {
+        // Same episode: toggle play/pause.
         return { ...state, playing: !state.playing };
       }
-      // Phase 4B: no real duration from DB; 300s placeholder so the scrubber
-      // isn't completely stuck. Phase 5 will replace with episode.duration_sec.
-      return { ...state, episode: action.episode, t: 0, dur: 300, playing: true };
+      // Different episode: reset position and auto-play.
+      // Rationale: user made an explicit selection gesture — requiring a second
+      // click to start audio is unnecessary friction. Same behaviour as Spotify,
+      // Apple Podcasts, Overcast. dur starts at 0 until onloadedmetadata fires.
+      return { ...state, episode: action.episode, t: 0, dur: 0, playing: true };
+
     case "toggle":
       return { ...state, playing: !state.playing };
+
     case "close":
-      return { ...state, episode: null, playing: false, t: 0 };
+      return { ...state, episode: null, playing: false, t: 0, dur: 0 };
+
     case "cycleSpeed": {
       const idx = SPEED_CYCLE.indexOf(state.speed);
       return { ...state, speed: SPEED_CYCLE[(idx + 1) % SPEED_CYCLE.length] };
     }
-    case "tick": {
-      const next = state.t + action.dt * state.speed;
-      if (next >= state.dur) return { ...state, t: state.dur, playing: false };
-      return { ...state, t: next };
-    }
+
+    case "setTime":
+      return { ...state, t: action.t };
+
+    case "setDur":
+      return { ...state, dur: action.dur };
+
+    case "ended":
+      // Audio ended naturally. Reset to start, pause.
+      // No auto-advance — that is a Phase 6 feature.
+      return { ...state, playing: false, t: 0 };
   }
 }
 
@@ -62,38 +85,49 @@ function fmt(sec: number): string {
 interface StickyMiniPlayerProps {
   state: PlayerState;
   dispatch: (action: PlayerAction) => void;
+  /** Called when the user drags or clicks the scrubber. ListenClient
+   *  sets audio.currentTime and dispatches setTime for immediate feedback. */
+  onSeek: (t: number) => void;
 }
 
-export default function StickyMiniPlayer({ state, dispatch }: StickyMiniPlayerProps) {
-  const rafRef = useRef<number | null>(null);
-  const lastTickRef = useRef<number | null>(null);
-
-  // rAF loop for simulated playback.
-  useEffect(() => {
-    if (!state.playing || !state.episode || state.dur === 0) {
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-      lastTickRef.current = null;
-      return;
-    }
-    const tick = (now: number) => {
-      if (lastTickRef.current == null) lastTickRef.current = now;
-      const dt = (now - lastTickRef.current) / 1000;
-      lastTickRef.current = now;
-      dispatch({ type: "tick", dt });
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-    return () => {
-      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    };
-    // Only re-subscribe when playing state or episode changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.playing, state.episode?.id]);
+export default function StickyMiniPlayer({
+  state,
+  dispatch,
+  onSeek,
+}: StickyMiniPlayerProps) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  // Guards against firing onSeek from PointerMove when not actively dragging.
+  const isDragging = useRef(false);
 
   if (!state.episode) return null;
 
   const pct = state.dur > 0 ? (state.t / state.dur) * 100 : 0;
   const ep = state.episode;
+
+  // Compute the seek position from a pointer event's clientX.
+  const seekFromPointer = (clientX: number) => {
+    const track = trackRef.current;
+    if (!track || !state.dur) return;
+    const rect = track.getBoundingClientRect();
+    const fraction = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    onSeek(fraction * state.dur);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    isDragging.current = true;
+    // Capture so the element keeps receiving events if the pointer leaves it.
+    e.currentTarget.setPointerCapture(e.pointerId);
+    seekFromPointer(e.clientX);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging.current) return;
+    seekFromPointer(e.clientX);
+  };
+
+  const handlePointerUp = () => {
+    isDragging.current = false;
+  };
 
   return (
     <div className="fixed bottom-0 inset-x-0 z-40 pb-3 px-3 md:px-6">
@@ -137,7 +171,7 @@ export default function StickyMiniPlayer({ state, dispatch }: StickyMiniPlayerPr
             )}
           </button>
 
-          {/* Episode info + progress */}
+          {/* Episode info + interactive progress bar */}
           <div className="min-w-0 flex-1">
             <div
               className="text-[11px] font-mono uppercase tracking-[0.14em] leading-none mb-1"
@@ -148,24 +182,47 @@ export default function StickyMiniPlayer({ state, dispatch }: StickyMiniPlayerPr
             <div className="text-[14px] font-medium text-paper truncate">
               {ep.headline ?? ep.slug}
             </div>
+
+            {/*
+              Scrubber — interactive. The outer div has vertical padding for
+              a larger touch target (11 px total hit area vs 3 px visual bar).
+              touchAction: "none" prevents iOS from stealing the gesture for
+              page scroll.
+            */}
             <div
-              className="mt-2 h-[3px] rounded-full overflow-hidden"
-              style={{ backgroundColor: "rgba(242,238,229,0.2)" }}
+              ref={trackRef}
+              className="mt-2 py-2 cursor-pointer"
+              style={{ touchAction: "none" }}
+              role="slider"
+              tabIndex={0}
+              aria-valuenow={Math.round(pct)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Playback progress"
+              aria-valuetext={`${fmt(state.t)} of ${state.dur > 0 ? fmt(state.dur) : "unknown"}`}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
             >
               <div
-                className="h-full rounded-full bg-mustard transition-none"
-                style={{ width: `${pct}%` }}
-              />
+                className="h-[3px] rounded-full overflow-hidden"
+                style={{ backgroundColor: "rgba(242,238,229,0.2)" }}
+              >
+                <div
+                  className="h-full rounded-full bg-mustard"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
             </div>
           </div>
 
           {/* Time + speed — desktop only */}
           <div
-            className="hidden md:flex flex-col items-end text-[11px] font-mono tabular-nums leading-snug gap-1"
+            className="hidden md:flex flex-col items-end text-[11px] font-mono tabular-nums leading-snug gap-1 shrink-0"
             style={{ color: "rgba(242,238,229,0.7)" }}
           >
             <span>
-              {fmt(state.t)} / {fmt(state.dur)}
+              {fmt(state.t)} / {state.dur > 0 ? fmt(state.dur) : "–:––"}
             </span>
             <button
               type="button"
