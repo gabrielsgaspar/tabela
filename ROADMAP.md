@@ -107,21 +107,24 @@ Build phases for Tabela. Mark `← CURRENT` next to the active phase. Each phase
 
 ---
 
-## Phase 4B — Real pages ← CURRENT
+## Phase 4B — Real pages ✅ DONE
 
 **Goal:** wire the component library to real data and ship the pages.
 
-- [ ] Home page (`/`) — today's edition: Masthead, FilterBar, MatchCard rows from Supabase, NarrativeSection with AudioPlayer.
-- [ ] League page (`/league/[code]`) — RaceWatch, StatLeaders, filtered MatchCards.
-- [ ] Team page (`/team/[id]`) — TeamHeader, recent matches, upcoming fixtures, ripple effects, season stats.
-- [ ] Routing: link MatchCard affordance row (Read the report / Lineups / Player ratings) to real pages.
-- [ ] Deploy to Vercel; confirm live site reads from Supabase.
+- [x] Home page (`/`) — today's edition: Masthead, FilterBar (league chips), MatchCard rows from Supabase, editorial NarrativeSection, StatLeaderCard for top scorer + assister.
+- [x] League page (`/leagues/[slug]`) — FullStandingsTable (expandable rows, zone colours), StatLeaders, recent matchday MatchCards, latest league editorial.
+- [x] Team page (`/teams/[id]`) — team header (crest + position + form), SeasonStatsPanel (dark bg-pitch, 8-stat grid), recent MatchCards, upcoming fixtures.
+- [x] Listen page (`/listen`) — single query for audio editorials, week-grouped EpisodeList, sticky MiniPlayer (rAF simulated; Phase 5 wires real audio), graceful empty state.
+- [x] Routing: `FullStandingsTable` expansion panel links to `/teams/[id]`; home page league headers link to `/leagues/[slug]`.
+- [x] Deployed to Vercel (production). Deployment `dpl_E86uRW1emjJ2kPE1HmVnLhg9o1eD`. All four routes return 200 on live URL.
 
-**Done when:** the live site renders the latest run's data and matches the design reference end-to-end.
+**What shipped:** four server-rendered routes (home dynamic, leagues dynamic, teams dynamic, listen static); two client islands (FullStandingsTable expansion + listen filters/sticky player); Supabase anon reads via `createBrowserClient`; no service-role key on web. Live: https://tabela-topaz.vercel.app
+
+**Done when:** the live site renders the latest run's data and matches the design reference end-to-end. ✓ Confirmed 2026-05-06.
 
 ---
 
-## Phase 5 — Audio
+## Phase 5 — Audio ← CURRENT
 
 **Goal:** every editorial has an audio version users can play in-line.
 

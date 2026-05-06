@@ -343,4 +343,49 @@ After three eval runs, the model occasionally reaches for weaker historical cont
 
 **Daily report schedule:** remains paused. Trigger.dev pipeline not redeployed with this build. Enabling the schedule requires `pnpm trigger:deploy` to push Phase 3.5 changes to Trigger.dev's cloud before re-enabling.
 
+---
+
+### 2026-05-06 — Phase 4B closure — listen page deployed, phase complete
+
+**Decision.** Ship the listen page (`/listen`) as Commit 5 and declare Phase 4B done. This is the third and final production deployment of Phase 4B.
+
+**Deployment ID:** `dpl_E86uRW1emjJ2kPE1HmVnLhg9o1eD`
+
+**Deployed URL:** https://tabela-topaz.vercel.app (alias unchanged)
+
+**Phase 4B total commits:** 5 (home, styleguide fixes → Commits 1–2; league pages → Commit 3; team pages → Commit 4; listen page → Commit 5). Three Vercel production deployments.
+
+**Build summary:**
+- 6 routes: `/` (dynamic), `/_not-found` (static), `/leagues/[slug]` (dynamic), `/listen` (static — no audio rows in DB yet), `/styleguide` (static), `/teams/[id]` (dynamic)
+- Compiled in 5.3 s (Vercel), TypeScript clean, zero ESLint errors
+- Build machine: 2 cores / 8 GB, Washington D.C. (iad1)
+
+**Live verification (post-deploy):**
+- `/listen` — 200, empty state text ("No episodes yet" / "Audio synthesis is coming in Phase 5") rendered in HTML; header and footer present
+- `/` — 200 (regression check)
+- `/leagues/premier-league` — 200 (regression check)
+- `/teams/57` — 200 (regression check)
+
+**Architectural choices locked in Commit 5:**
+
+- **`ListenClient` wrapper for shared player + filter state.** Rather than reaching for React Context, a thin client component (`ListenClient.tsx`) owns `useState` for filters and `useReducer(playerReducer)` for player state, passing both down as props to `EpisodeFilters`, `EpisodeList`, and `StickyMiniPlayer`. Three sibling components share state without a global store.
+
+- **rAF simulated playback in Phase 4B.** No `<audio>` element is wired yet — `StickyMiniPlayer` uses `requestAnimationFrame` to advance a local timer, giving the full play/pause/speed/scrub UI without requiring a real `audio_url`. The 300-second placeholder duration is the only Phase-4B-specific assumption; Phase 5 replaces it with the real `duration_sec` column and an `HTMLAudioElement`.
+
+- **`/listen` prerendered as static.** Because `getListenEpisodes` returns zero rows (no audio_url in DB yet), Next.js prerendered the page as static HTML at build time. Once the Phase 5 pipeline populates `audio_url`, the page will need to be dynamic (or ISR with a short revalidation window) so the episode list is fresh. Add `export const dynamic = 'force-dynamic'` or a revalidation tag to `src/app/listen/page.tsx` when Phase 5 ships.
+
+- **`EpisodeArt` has no `"use client"`.** The component uses no hooks or browser APIs and is consumed by both the server-rendered `HeroEpisode` and the client-rendered `EpisodeRow`. Keeping it directive-free lets React use it in both trees without a module boundary.
+
+- **Listen page query limit: 60 episodes.** Assumes the pipeline runs once a day with ~5–6 editorial types per run; 60 episodes covers roughly 10–12 days. Increase the limit or add pagination if the user expects a longer browse history.
+
+**Phase 4B summary — what shipped:**
+| Route | Type | Client islands |
+|-------|------|----------------|
+| `/` | Dynamic (SSR) | FilterBar (league chips) |
+| `/leagues/[slug]` | Dynamic (SSR) | FullStandingsTable expansion |
+| `/teams/[id]` | Dynamic (SSR) | None |
+| `/listen` | Static (prerendered) | EpisodeFilters + EpisodeList + StickyMiniPlayer |
+
+All routes use `createBrowserClient()` (anon key only). No service-role key on web.
+
 <!-- Add new entries above this line, newest at top -->
