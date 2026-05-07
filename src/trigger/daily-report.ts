@@ -7,6 +7,7 @@
 
 import { task, schedules } from "@trigger.dev/sdk";
 import { runDailyPipeline } from "./pipeline";
+import { notifyRunComplete } from "./notify";
 
 // Return the UTC date for yesterday as YYYY-MM-DD.
 function yesterdayUtc(): string {
@@ -35,6 +36,8 @@ export const dailyReportSchedule = schedules.task({
         `failed=${result.editorialsFailed}`,
     );
 
+    await notifyRunComplete(result);
+
     return result;
   },
 });
@@ -48,6 +51,7 @@ export const dailyReportOneShot = task({
     console.log(`[daily-report-one-shot] Starting pipeline for ${date}`);
     const result = await runDailyPipeline(date);
     console.log(`[daily-report-one-shot] Done:`, result);
+    await notifyRunComplete(result);
     return result;
   },
 });

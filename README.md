@@ -12,14 +12,15 @@ Premier League · La Liga · Bundesliga · Serie A · Ligue 1
 
 ## Stack
 
-Next.js 16 · Trigger.dev v3 · Supabase (Postgres + Storage) · Anthropic Claude · ElevenLabs
+Next.js 16 · Trigger.dev v4 · Supabase (Postgres + Storage) · Anthropic Claude · ElevenLabs
 
 ## Status
 
-**Phase 1 in progress.** Foundations (docs, design tokens, type definitions,
-editorial prompts) are in place. The data pipeline, database schema, and
-website are under active development. See `ROADMAP.md` for the phase breakdown
-and `DECISIONS.md` for architectural context.
+**Phase 6 — pre-launch.** All five leagues are running, audio synthesis is
+wired, and the daily schedule is configured. Completing the final operational
+checklist (ElevenLabs upgrade, production audio verification, ISR fix) before
+unpausing the schedule. See `ROADMAP.md` for the current milestone and
+`DECISIONS.md` for architectural context.
 
 ## Project structure
 

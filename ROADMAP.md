@@ -143,27 +143,23 @@ Build phases for Tabela. Mark `← CURRENT` next to the active phase. Each phase
 
 ## Phase 6 — Polish ← CURRENT
 
-> **Fresh session note:** Phase 6 starts with an audit, not new features. Open a
-> fresh session, read `CLAUDE.md`, `ROADMAP.md`, `DECISIONS.md`, then produce
-> `PHASE_6_AUDIT.md` per the spec we'll provide in the new session.
-
 **Goal:** audit what exists for launch-readiness, fix what surfaces, then execute the
 launch sequence (tier upgrade, voice swap, schedule unpause, first user).
+
+**Audit completed:** `PHASE_6_AUDIT.md` produced and committed. Three pre-launch fixes applied:
+1. Storage path trailing-dash bug fixed (`upload.ts`) + production data repaired (`scripts/fix-day-overview-path.ts`).
+2. Prompt hedge patterns suppressed in `prompts.ts` (league-overview and day-overview format blocks).
+3. Discord run-status notification wired (`notify.ts` + `daily-report.ts`), docs drift corrected.
 
 **Pre-launch sequence (ordered — complete in this order before unpausing the daily schedule):**
 
 1. [ ] **ElevenLabs Creator tier upgrade** ($22/mo) — required before any production synthesis. Bypasses free-tier IP abuse detection on container environments. See DECISIONS.md 2026-05-06 entry for full context.
-2. [ ] **Phase 5 B3: production audio one-shot** — trigger `daily-report-one-shot` for a recent matchday, confirm `audio_url` populated on all `day_overview` + `league_overview` rows, curl one mp3 URL for `200 audio/mpeg`.
-3. [ ] **Phase 5 B4: `/listen` ISR fix** — add `export const revalidate = 3600` (or `force-dynamic`) to `src/app/listen/page.tsx`. Vercel redeploy. Confirm `/listen` shows real episodes on the live site. Remove the dev-only MDN test audio block.
-4. [ ] **Production voice swap** — replace `ELEVENLABS_VOICE_ID` in Trigger.dev Production from Sarah (`EXAVITQu4vr4xnSDxMaL`) to the chosen production voice. Test before unpausing schedule.
+2. [ ] **Production voice swap** — replace `ELEVENLABS_VOICE_ID` in Trigger.dev Production from Sarah (`EXAVITQu4vr4xnSDxMaL`) to George (`jsCqWAovK2LkecY7zXl4`). Set `DISCORD_NOTIFY_WEBHOOK` at same time.
+3. [ ] **Phase 5 B3: production audio one-shot** — trigger `daily-report-one-shot` for a recent matchday, confirm `audio_url` populated on all `day_overview` + `league_overview` rows, curl one mp3 URL for `200 audio/mpeg`.
+4. [ ] **Phase 5 B4: `/listen` ISR fix** — add `export const revalidate = 3600` to `src/app/listen/page.tsx`. Remove dev-only MDN test block. Fix empty-state copy. Vercel redeploy. Confirm `/listen` shows real episodes on the live site.
 5. [ ] **Unpause daily schedule** (`sched_wqapcm3eta5zi6huqsm83`) in Trigger.dev dashboard — only after steps 1–4 are done and at least one production audio run has been verified.
 
-**Phase 6 features:**
-
-- [ ] "Follow a team" — auth via Supabase Auth, weekly digest job.
-- [ ] Country flag filter UI on the home page.
-- [ ] Season leaderboards page.
-- [ ] Optional: email digest (the original F1-repo pattern).
-- [ ] Open graph images for share previews.
+**Proposed Phase 6 features** (post-launch, see `PHASE_6_PROPOSED_FEATURES.md` for full list):
+"Follow a team", country flag filter, season leaderboards, open graph share images.
 
 **Done when:** Tabela feels like a finished product and you'd send the link to a friend.

@@ -551,4 +551,32 @@ pre-launch sequence. Voice swap (Sarah → production voice) remains step 4.
 
 ---
 
+### 2026-05-07 — Version clarification: Next.js 16.2.4, Trigger.dev SDK 4.4.5
+
+**Decision.** Docs updated to reflect actual installed versions.
+
+**Context.** Earlier entries and CLAUDE.md referred to "Next.js 15 · Trigger.dev v3". The
+actual installed versions are `next@16.2.4` and `@trigger.dev/sdk@4.4.5`. Both were updated
+during development without explicit version-bump decisions; the docs drifted.
+
+**How to read older entries.** Any reference to "Next.js 15" or "Trigger.dev v3" in prior
+decisions should be understood as the stack at that snapshot, not the current versions.
+
+---
+
+### 2026-05-07 — Discord webhook for run-status monitoring
+
+**Decision.** Added a non-fatal `notifyRunComplete()` call in both `dailyReportSchedule` and
+`dailyReportOneShot`, posting a brief summary to a Discord webhook after each pipeline run.
+
+**Alternatives.** Trigger.dev's built-in run history UI (no setup, always available); email
+alert via Resend; PagerDuty/Opsgenie for on-call rotation.
+
+**Rationale.** The Trigger.dev dashboard requires a login to check; a Discord ping in a
+personal server is zero-friction for solo operation. Zero new npm dependencies (native
+`fetch()`). Non-fatal — notification failures never abort the pipeline. Opt-in via
+`DISCORD_NOTIFY_WEBHOOK` env var; absent = silent no-op.
+
+---
+
 <!-- Add new entries above this line, newest at top -->

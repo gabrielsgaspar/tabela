@@ -145,26 +145,6 @@ const CAPTION_TOOL: Tool = {
   },
 };
 
-const SUMMARY_TOOL: Tool = {
-  name: "write_match_summary",
-  description: "Write a 2–3 paragraph match summary with a headline.",
-  input_schema: {
-    type: "object",
-    properties: {
-      headline: {
-        type: "string",
-        description: "6–10 words. States the result plainly. No exclamation, no inflation.",
-      },
-      body: {
-        type: "string",
-        description:
-          "2–3 paragraphs separated by \\n\\n. Does not open with the score.",
-      },
-    },
-    required: ["headline", "body"],
-  },
-};
-
 const LEAGUE_OVERVIEW_TOOL: Tool = {
   name: "write_league_overview",
   description: "Write a 3–5 paragraph overview of a single league's matchday.",
@@ -582,47 +562,6 @@ working through a league's results should encounter structurally distinct senten
     userText,
     tool: CAPTION_TOOL,
     toolName: CAPTION_TOOL.name,
-  };
-}
-
-export function buildMatchSummaryPrompt(input: MatchEditorialInput): PromptPackage {
-  const { context, match, topScorers } = input;
-
-  const historyBlock = formatTeamHistoryBlock(input);
-  const historySectionInFormat = historyBlock ? `\n\n${HISTORY_CALIBRATION_SECTION}` : "";
-
-  const formatBlock: TextBlock = {
-    type: "text",
-    text: `\
-FORMAT: MATCH SUMMARY
-2–3 paragraphs, separated by \\n\\n.
-
-Guidelines:
-- The headline states the result plainly (6–10 words, no verb inflation).
-- The opening paragraph establishes what the result means — not what happened goal by goal.
-- Subsequent paragraphs use whatever the data supports: the half-time picture, the
-  opposition's season context, the scorer list as background colour.
-- Do not open with the score (it appears in the headline above the body).
-- Do not describe goalscorer sequences, substitutions, or tactical instructions —
-  none of that data is available.${historySectionInFormat}`,
-  };
-
-  const userText =
-    `League: ${context.leagueName} — Matchday ${match.matchday} — ${context.date}\n` +
-    `\n` +
-    `RESULT\n` +
-    `${formatResultLong(match)}\n` +
-    `\n` +
-    `SEASON TOP SCORERS (${context.leagueName})\n` +
-    `${formatScorers(topScorers, 10)}\n` +
-    (historyBlock ? `\n${historyBlock}\n` : `\n`) +
-    `Write the match summary using the write_match_summary tool.`;
-
-  return {
-    systemBlocks: [VOICE_BLOCK, formatBlock],
-    userText,
-    tool: SUMMARY_TOOL,
-    toolName: SUMMARY_TOOL.name,
   };
 }
 

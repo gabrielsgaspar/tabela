@@ -100,7 +100,11 @@ We persist daily snapshots so the website can be browsed and so Claude has memor
 - `editorials(date, league_code | null, kind, headline, body, audio_url, created_at)` — Claude-generated summaries, including audio file URL.
 - `teams_followed(user_id, team_id)` — for the "follow a team" feature (deferred until auth exists).
 
-**Audio files:** Supabase Storage bucket `episodes/`, keyed by `{date}/{kind}-{slug}.mp3`.
+**Audio files:** Supabase Storage bucket `episodes/`, path pattern:
+- `{date}/{kind}.mp3` — for `day_overview` (empty slug, no trailing dash)
+- `{date}/{kind}-{slug}.mp3` — for `league_overview` (slug = lowercase league code, e.g. `pl`)
+
+Examples: `2026-05-06/day_overview.mp3`, `2026-05-06/league_overview-pl.mp3`
 
 ## Season memory store
 

@@ -12,9 +12,8 @@ export interface SynthesisResult {
   mp3Buffer: Buffer;
   contentType: "audio/mpeg";
   bytes: number;
-  // Rough estimate based on average 150 wpm spoken rate. Populated after
-  // upload when we get the real duration from audio metadata; set to
-  // undefined here because ElevenLabs doesn't return duration directly.
+  // Rough estimate based on average 150 wpm spoken rate.
+  // ElevenLabs does not return duration directly; this is never populated.
   durationEstimate?: number;
 }
 
