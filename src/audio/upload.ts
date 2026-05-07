@@ -2,8 +2,9 @@
 //
 // Storage layout:
 //   Bucket:  episodes   (public, created via Supabase dashboard / migration)
-//   Path:    episodes/{date}/{kind}-{slug}.mp3
-//   Example: episodes/2026-05-06/day_overview-.mp3
+//   Path:    episodes/{date}/{kind}.mp3          (day_overview — no slug)
+//            episodes/{date}/{kind}-{slug}.mp3   (league_overview — slug is league code)
+//   Example: episodes/2026-05-06/day_overview.mp3
 //            episodes/2026-05-06/league_overview-pl.mp3
 //
 // After upload, audio_url on the matching editorials row is updated so the
@@ -17,8 +18,9 @@ const BUCKET = "episodes";
 // ---- Storage path helper --------------------------------------------------
 
 export function buildStoragePath(ref: EditorialRef): string {
-  // slug is "" for day_overview — included so the path stays consistent.
-  const filename = `${ref.kind}-${ref.slug}.mp3`;
+  // day_overview rows have slug = ""; omit the dash when there is no slug.
+  const suffix = ref.slug ? `-${ref.slug}` : "";
+  const filename = `${ref.kind}${suffix}.mp3`;
   return `${ref.date}/${filename}`;
 }
 

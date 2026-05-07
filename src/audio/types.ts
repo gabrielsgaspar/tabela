@@ -28,7 +28,7 @@ export interface PreProcessResult {
 
 export interface UploadResult {
   publicUrl: string;
-  // Storage path relative to bucket root, e.g. "episodes/2026-05-06/day_overview-.mp3"
+  // Storage path relative to bucket root, e.g. "episodes/2026-05-06/day_overview.mp3"
   storagePath: string;
   bytes: number;
 }
