@@ -76,12 +76,12 @@ Don't edit old entries — if a decision is reversed, add a new entry referencin
 
 ---
 
-### 2026-05-04 — TTS provider: ElevenLabs; voice: George
+### 2026-05-04 — TTS provider: ElevenLabs; voice: Adam
 
 **Decision.** ElevenLabs for text-to-speech synthesis. SDK: `@elevenlabs/elevenlabs-js`
 (the `elevenlabs` npm package was deprecated at the time of install and redirects here).
-Model: `eleven_multilingual_v2`. Voice: **George** (`jsCqWAovK2LkecY7zXl4`) —
-warm, measured, British-accented.
+Model: `eleven_multilingual_v2`. Voice: **Adam** (`jsCqWAovK2LkecY7zXl4`) —
+"Adam - Confident Passionate British Narrator" (category: professional).
 
 **Alternatives.** OpenAI TTS (`tts-1-hd`, voices: alloy / onyx) at ~$0.015/1k chars
 vs ElevenLabs Creator tier at ~$0.24/1k chars overage — roughly 15× cheaper. OpenAI
@@ -428,7 +428,7 @@ The original $1/editorial figure was ~200× too high. Actual rate is ~$0.005 per
 
 **Voice in use for Phase 5 verification:** Sarah (`EXAVITQu4vr4xnSDxMaL`) — ElevenLabs pre-made voice, available on free and paid tiers. Selected as a stand-in for pipeline wiring verification only. This is not the production voice.
 
-**Original voice decision (2026-05-04 entry):** George (`jsCqWAovK2LkecY7zXl4`) — library/community voice, requires paid plan (Starter or above). Voice ID preserved in `.env.local` as a comment. Production voice selection + account upgrade are Phase 6 launch prerequisites, not Phase 5 concerns.
+**Original voice decision (2026-05-04 entry):** Adam (`jsCqWAovK2LkecY7zXl4`) — "Adam - Confident Passionate British Narrator" (category: professional), requires paid plan (Starter or above). Voice ID preserved in `.env.local` as a comment. Production voice selection + account upgrade are Phase 6 launch prerequisites, not Phase 5 concerns.
 
 **Phase 6 pre-launch requirement added to ROADMAP.md:** Creator tier must be active before unpausing the daily schedule.
 

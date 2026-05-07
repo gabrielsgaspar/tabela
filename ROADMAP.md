@@ -160,7 +160,7 @@ launch sequence (tier upgrade, voice swap, schedule unpause, first user).
 **Pre-launch sequence (ordered — complete in this order before unpausing the daily schedule):**
 
 1. [ ] **ElevenLabs Creator tier upgrade** ($22/mo) — required before any production synthesis. Bypasses free-tier IP abuse detection on container environments. See DECISIONS.md 2026-05-06 entry for full context.
-2. [ ] **Production voice swap** — replace `ELEVENLABS_VOICE_ID` in Trigger.dev Production from Sarah (`EXAVITQu4vr4xnSDxMaL`) to George (`jsCqWAovK2LkecY7zXl4`). Set `DISCORD_NOTIFY_WEBHOOK` at same time.
+2. [ ] **Production voice swap** — replace `ELEVENLABS_VOICE_ID` in Trigger.dev Production from Sarah (`EXAVITQu4vr4xnSDxMaL`) to Adam (`jsCqWAovK2LkecY7zXl4`) — "Adam - Confident Passionate British Narrator", category: professional (see DECISIONS.md 2026-05-04 entry). Set `DISCORD_NOTIFY_WEBHOOK` at same time.
 3. [ ] **Phase 5 B3: production audio one-shot** — trigger `daily-report-one-shot` for a recent matchday, confirm `audio_url` populated on all `day_overview` + `league_overview` rows, curl one mp3 URL for `200 audio/mpeg`.
 4. [ ] **Phase 5 B4: `/listen` ISR fix** — add `export const revalidate = 3600` to `src/app/listen/page.tsx`. Remove dev-only MDN test block. Fix empty-state copy. Vercel redeploy. Confirm `/listen` shows real episodes on the live site.
 5. [ ] **Unpause daily schedule** (`sched_wqapcm3eta5zi6huqsm83`) in Trigger.dev dashboard — only after steps 1–4 are done and at least one production audio run has been verified.
