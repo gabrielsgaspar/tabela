@@ -151,6 +151,12 @@ launch sequence (tier upgrade, voice swap, schedule unpause, first user).
 2. Prompt hedge patterns suppressed in `prompts.ts` (league-overview and day-overview format blocks).
 3. Discord run-status notification wired (`notify.ts` + `daily-report.ts`), docs drift corrected.
 
+**Pre-launch operational setup (do BEFORE Step 1):**
+- Create a Discord webhook for notifications: Discord → channel settings → Integrations → Webhooks → New Webhook → Copy URL.
+- Add the URL to `.env.local` AND Trigger.dev Production env vars as `DISCORD_NOTIFY_WEBHOOK`.
+- Run `pnpm trigger:dev` locally, trigger `daily-report-one-shot` for any date, confirm the webhook fires and the summary message arrives in Discord.
+- The code is wired (`notify.ts`); this step puts the URL in place before the live schedule starts.
+
 **Pre-launch sequence (ordered — complete in this order before unpausing the daily schedule):**
 
 1. [ ] **ElevenLabs Creator tier upgrade** ($22/mo) — required before any production synthesis. Bypasses free-tier IP abuse detection on container environments. See DECISIONS.md 2026-05-06 entry for full context.
