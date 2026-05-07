@@ -256,6 +256,7 @@ export default async function LeaguePage({
                   playerName={topScorer.player.name}
                   teamName={topScorer.team.name}
                   teamCrestUrl={scorerCrestUrl(topScorer.team.id)}
+                  teamId={topScorer.team.id}
                   statValue={topScorer.goals}
                 />
               )}
@@ -266,6 +267,7 @@ export default async function LeaguePage({
                   playerName={bestAssister.player.name}
                   teamName={bestAssister.team.name}
                   teamCrestUrl={scorerCrestUrl(bestAssister.team.id)}
+                  teamId={bestAssister.team.id}
                   statValue={bestAssister.assists ?? 0}
                 />
               )}

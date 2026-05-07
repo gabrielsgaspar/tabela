@@ -50,6 +50,7 @@
  *     both teams at full opacity.
  */
 
+import Link from "next/link";
 import TeamCrest from "@/components/TeamCrest";
 
 // ── types ────────────────────────────────────────────────────────────────────
@@ -237,7 +238,9 @@ export default function MatchCard({
               isFinished && winner === "away" ? "opacity-55" : "",
             ].join(" ")}
           >
-            <TeamCrest src={homeTeam.crestUrl} alt={homeTeam.name} size={36} />
+            <Link href={`/teams/${homeTeam.id}`} className="shrink-0 hover:opacity-80 transition-opacity">
+              <TeamCrest src={homeTeam.crestUrl} alt={homeTeam.name} size={36} />
+            </Link>
             <div className="min-w-0">
               <div className="font-medium text-[15px] md:text-[16px] text-ink truncate">
                 {homeTeam.name}
@@ -291,7 +294,9 @@ export default function MatchCard({
                 Away
               </div>
             </div>
-            <TeamCrest src={awayTeam.crestUrl} alt={awayTeam.name} size={36} />
+            <Link href={`/teams/${awayTeam.id}`} className="shrink-0 hover:opacity-80 transition-opacity">
+              <TeamCrest src={awayTeam.crestUrl} alt={awayTeam.name} size={36} />
+            </Link>
           </div>
 
         </div>
@@ -301,12 +306,16 @@ export default function MatchCard({
       {isCancelled && (
         <div className="flex items-center gap-3 text-[14px] text-ink2">
           <div className="flex items-center gap-2 min-w-0">
-            <TeamCrest src={homeTeam.crestUrl} alt={homeTeam.name} size={22} />
+            <Link href={`/teams/${homeTeam.id}`} className="shrink-0 hover:opacity-80 transition-opacity">
+              <TeamCrest src={homeTeam.crestUrl} alt={homeTeam.name} size={22} />
+            </Link>
             <span className="truncate">{homeTeam.name}</span>
           </div>
           <span className="text-ink3 shrink-0" aria-hidden="true">vs</span>
           <div className="flex items-center gap-2 min-w-0">
-            <TeamCrest src={awayTeam.crestUrl} alt={awayTeam.name} size={22} />
+            <Link href={`/teams/${awayTeam.id}`} className="shrink-0 hover:opacity-80 transition-opacity">
+              <TeamCrest src={awayTeam.crestUrl} alt={awayTeam.name} size={22} />
+            </Link>
             <span className="truncate">{awayTeam.name}</span>
           </div>
         </div>

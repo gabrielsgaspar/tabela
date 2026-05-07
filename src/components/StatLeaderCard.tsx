@@ -16,6 +16,7 @@
  *   StatLeaderCardSkeleton — loading shimmer
  */
 
+import Link from "next/link";
 import TeamCrest from "@/components/TeamCrest";
 import Sparkline from "@/components/Sparkline";
 import TrendArrow from "@/components/TrendArrow";
@@ -45,6 +46,10 @@ export interface StatLeaderCardProps {
   deltaLabel?: string;
   /** Editor's note at the card bottom. E.g. contextual commentary on the stat. */
   note?: string;
+  /** When present, wraps the team crest in a link to the team page. */
+  teamId?: number;
+  /** When present, wraps the category label in a link (e.g. to a league page). */
+  categoryHref?: string;
 }
 
 // ---- main export ------------------------------------------------------------
@@ -60,6 +65,8 @@ export default function StatLeaderCard({
   delta,
   deltaLabel,
   note,
+  teamId,
+  categoryHref,
 }: StatLeaderCardProps) {
   const hasSparkline = sparkData != null && sparkData.length > 0;
   const hasTrend = delta != null;
@@ -70,7 +77,11 @@ export default function StatLeaderCard({
       {/* Top row: category (left) + stat label (right) */}
       <div className="flex items-baseline justify-between gap-3 mb-3">
         <div className="text-[11px] font-mono uppercase tracking-[0.14em] text-ink3">
-          {category}
+          {categoryHref ? (
+            <Link href={categoryHref} className="hover:text-ink2 transition-colors">
+              {category}
+            </Link>
+          ) : category}
         </div>
         <div className="text-[10px] font-mono uppercase tracking-[0.12em] text-ink3">
           {statLabel}
@@ -79,7 +90,13 @@ export default function StatLeaderCard({
 
       {/* Player block: crest + name + team */}
       <div className="flex items-center gap-3 mb-3">
-        <TeamCrest src={teamCrestUrl} alt={teamName} size={32} />
+        {teamId ? (
+          <Link href={`/teams/${teamId}`} className="shrink-0 hover:opacity-80 transition-opacity">
+            <TeamCrest src={teamCrestUrl} alt={teamName} size={32} />
+          </Link>
+        ) : (
+          <TeamCrest src={teamCrestUrl} alt={teamName} size={32} />
+        )}
         <div className="min-w-0 flex-1">
           <div className="h-serif text-[19px] md:text-[20px] leading-tight text-ink">
             {playerName}

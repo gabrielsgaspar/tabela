@@ -4,6 +4,7 @@
 // ?league=<slug> filters match groups, stat leaders, and race watch server-side.
 
 import { Suspense } from "react";
+import Link from "next/link";
 import Masthead from "@/components/Masthead";
 import Footer from "@/components/Footer";
 import EditorialBlock from "@/components/EditorialBlock";
@@ -157,7 +158,9 @@ export default async function HomePage({
                         {league.flag}
                       </span>
                       <h3 className="h-serif text-[22px] md:text-[26px] text-ink">
-                        {league.name}
+                        <Link href={`/leagues/${league.slug}`} className="hover:text-pitch transition-colors">
+                          {league.name}
+                        </Link>
                       </h3>
                     </div>
                     <a
@@ -236,10 +239,12 @@ export default async function HomePage({
                 <StatLeaderCard
                   key={league.code}
                   category={league.name}
+                  categoryHref={`/leagues/${league.slug}`}
                   statLabel="Goals"
                   playerName={topScorer.player.name}
                   teamName={topScorer.team.name}
                   teamCrestUrl={scorerCrestUrl(topScorer.team.id)}
+                  teamId={topScorer.team.id}
                   statValue={topScorer.goals}
                 />
               );
