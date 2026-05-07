@@ -655,6 +655,11 @@ Guidelines:
   where they stand. If the data does not say it, you cannot imply it.
 - Do not invent goalscorers, match events, or stats. Write from scores, opponents,
   matchday numbers, and the seasonal scorer context.
+- When a scorer appears in the seasonal context but their role in a specific match is
+  unknown, write about the match and team without naming the player in connection to
+  today's result. Do not hedge the absence — do not write "whether [Player] was
+  decisive here the data does not confirm" or "whether [X] scored today is unclear".
+  A writer who does not know who scored does not raise the subject. Omit it entirely.
 - On a day with only one or two matches, write only what those matches warrant. Do not
   pad the overview with observations about what the day "could not tell us" — if there
   is only one game, cover it fully and stop. Do not frame brevity as a limitation.`,
@@ -719,7 +724,10 @@ Guidelines:
   scores alone — do not signal the absence ("though without standings data…", "a sweeping
   picture of the title race or relegation picture was not available today"). The editorial
   voice assumes a reader; it does not address the reader's expectations about what
-  information the writer has.`,
+  information the writer has.
+- The same rule applies to any data gap: if you do not know who scored, do not write
+  "whether [Player] was involved the data does not say". Simply do not raise the subject.
+  Omit and move on; do not signal the omission.`,
   };
 
   const userText =
