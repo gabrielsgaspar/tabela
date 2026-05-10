@@ -6,6 +6,38 @@ Format: each item has a short description, why it matters, and any known constra
 
 ---
 
+## Daily pipeline — confirm it actually runs
+
+The whole product is downstream of one scheduled task running every morning. If it silently fails for a week we have nothing to publish and no caller to tell us. Treat this section as launch-blocking, not backlog.
+
+### Verify the schedule is live and producing data
+The `daily-report` schedule (`sched_wqapcm3eta5zi6huqsm83`, cron `0 7 * * *`) is currently **paused** per `ROADMAP.md` Phase 6. Unpausing is the last step in the pre-launch sequence — but once it's unpaused, we need a way to confirm it actually fires and produces a complete row set each day, not just that the Trigger.dev dashboard shows "succeeded".
+
+Checks to wire (all live in `src/trigger/` or a small adjacent script):
+- Each morning's run produces rows in `match_days`, `editorials`, and `season_stats` for the expected date. Missing any of the three = alert.
+- Each `editorial` row has a non-null `audio_url` (once Phase 5 B3 is unblocked).
+- The Football-Data.org fetch returned at least one match across all five leagues on any non-international-break day. Zero matches on a Saturday = alert; zero matches mid-week is normal.
+- Anthropic and ElevenLabs calls did not silently error into a fallback. Phase 3.5 already added "fall back to history-free generation" — confirm we're logging when that path is taken so a degraded run doesn't look identical to a healthy one.
+
+### Discord notifications are necessary but not sufficient
+`notify.ts` posts a run-status message. That tells us the task started and ended. It does not tell us the *editorial quality* is fine, or that all 5 leagues fetched. Extend the Discord payload (or post a second message) with the per-league match count, per-league editorial-generation status, and audio-url count. One line per league is enough.
+
+### Failure recovery playbook
+Document the "the morning task didn't run / produced bad data" runbook somewhere — probably in `DEV.md`. Specifically:
+- How to manually trigger `daily-report-one-shot` for a specific past date.
+- How to backfill a missed day's editorial without duplicating an existing row.
+- How to roll back a bad audio synthesis (delete from Storage + null the `audio_url`).
+
+The `scripts/` directory already has one-shot runners (`run-once`, `backfill`); audit them for what's covered and what's missing.
+
+### Synthetic / canary check
+A second scheduled task, cheaper and read-only, that runs an hour after `daily-report` and confirms today's rows exist. If they don't, post a loud Discord alert. Cheaper to write than to debug a silent multi-day outage. Probably 30 lines of Trigger.dev code.
+
+### Cost ceiling alerts
+Anthropic spend per day should be roughly constant. If it spikes 3× (prompt loop bug, retries, expanded leagues), we want to know before the bill arrives. Trigger.dev exposes per-run cost; aggregate weekly and post to Discord.
+
+---
+
 ## Coverage
 
 ### Add Champions League and Europa League
@@ -122,8 +154,8 @@ A periodic eval harness (like the Phase 3.5 history eval) that samples recent ed
 
 ## Operations and infrastructure
 
-### Observability beyond Discord notifications
-Discord webhook tells us a run finished. It doesn't tell us about partial failures (e.g., one league fetched fine but the editorial generation hedged). A small `run_health` table that aggregates per-run signals (matches fetched, editorials generated, audio synthesised, voice audit pass/fail) would catch silent degradation.
+### Run-health table
+A `run_health` table that persists per-run signals (matches fetched per league, editorials generated, audio synthesised, voice audit pass/fail, fallback paths taken) — distinct from the in-the-moment Discord alerts above. Lets us answer "has the Wednesday run been getting fewer matches each week?" without scrolling Discord.
 
 ### Backfill resilience
 The historical backfill (Phase 3.5) is a one-shot script. If the schema changes or we add a league, we need a clean re-runnable path. Audit `scripts/historical-backfill.ts` for idempotency under schema drift before we add `CL`/`EL`.
