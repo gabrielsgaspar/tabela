@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
     "run-once": "tsx --env-file=.env.local scripts/run-once.ts",
+    "probe:cl": "tsx --env-file=.env.local scripts/probe-cl.ts",
     "backfill": "tsx --env-file=.env.local scripts/backfill.ts",
     "supabase:link": "supabase link --project-ref $SUPABASE_PROJECT_REF",
     "supabase:push": "supabase db push",

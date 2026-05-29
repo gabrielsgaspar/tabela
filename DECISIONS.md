@@ -579,4 +579,65 @@ personal server is zero-friction for solo operation. Zero new npm dependencies (
 
 ---
 
+### 2026-05-29 — Re-scope to Premier League + Champions League
+
+**Decision.** Tabela's scope narrows from the five top European domestic leagues
+(PL, PD, BL1, SA, FL1) to **the Premier League (`PL`) and the UEFA Champions
+League (`CL`)** — the English top flight plus the premier European competition
+its clubs contest. Europa League / Conference League are deferred (see Phase B
+finding below). The four dropped domestic leagues keep their existing Supabase
+rows untouched — no migration, no deletion; they simply fall out of the app's
+`LEAGUES` / `LEAGUE_META` registries, so their pages 404. See `PLAN.md` (Phase 7).
+
+**Alternatives.** (a) Keep all five and just add CL. (b) Add the full UEFA set
+(CL + EL + ECL) at once. (c) Delete the dropped leagues' data.
+
+**Rationale.** The maintainer wants a tighter editorial product centred on the
+Premier League and the European nights its clubs play in. CL is on the free tier
+(confirmed below); EL/ECL are not, so they wait for a data-plan change. Leaving
+the dropped leagues' data in place is reversible and costs nothing — the change
+is purely what the app *surfaces*, not what the database holds.
+
+---
+
+### 2026-05-29 — Phase B: Champions League data on the free tier
+
+**Decision.** Build the CL integration against the Football-Data.org free tier;
+no paid upgrade and no migration to API-Football is required for the re-scope.
+
+**What's confirmed from the official docs (not yet a live call):**
+
+- **CL is on the free tier.** The coverage page lists Champions League among the
+  12 free competitions (alongside the five domestic leagues we already use).
+  Code `CL`, competition id `2001`.
+- **The competition uses a single 36-team league phase from 2024–25 onward**
+  (the old eight-group format is gone). So standings return *one* table with
+  `group: null`, not eight group tables — the qualification bands are
+  positional: 1–8 direct to the round of 16, 9–24 into a knockout play-off,
+  25–36 eliminated.
+- The standings **row shape matches the existing `StandingTableEntry`**
+  (`position`, `team`, `playedGames`, `won/draw/lost`, `points`, `goalsFor`,
+  `goalsAgainst`, `goalDifference`, `form`) — no new type needed.
+
+**What still needs a live authenticated call (deliberately left to the maintainer):**
+
+- The exact `stage` string for the league phase (e.g. `LEAGUE_STAGE` vs
+  `REGULAR_SEASON`) and whether the standings group's `type` is `"TOTAL"` — the
+  app filters standings on `type === "TOTAL"`, so Phase C must match CL's real value.
+- Whether knockout rounds report a standings table at all (they likely don't —
+  Phase C degrades to a results-only view when no table exists), and whether
+  `form` is populated for CL rows.
+
+`scripts/probe-cl.ts` (run: `pnpm probe:cl`) makes these four calls and prints
+the answers; it needs a real `FOOTBALL_DATA_TOKEN` in `.env.local`. The probe is
+read-only. Phase C is written defensively so it is correct regardless of the
+exact `stage`/`type` strings, but the probe output should be pasted here to close
+the loop.
+
+**Alternatives.** Upgrade to a paid tier for EL/ECL now; migrate to API-Football
+for richer CL data (xG, lineups). **Rationale.** The free tier already covers the
+PL + CL scope; richer data is a future decision with its own trigger.
+
+---
+
 <!-- Add new entries above this line, newest at top -->
