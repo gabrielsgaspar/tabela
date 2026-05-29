@@ -22,11 +22,8 @@ export interface LeagueMeta {
 const SEASON = "2025/26";
 
 export const LEAGUE_META: readonly LeagueMeta[] = [
-  { code: "PL",  name: "Premier League", slug: "premier-league", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", currentSeason: SEASON },
-  { code: "PD",  name: "La Liga",        slug: "la-liga",        flag: "🇪🇸",          currentSeason: SEASON },
-  { code: "BL1", name: "Bundesliga",     slug: "bundesliga",     flag: "🇩🇪",          currentSeason: SEASON },
-  { code: "SA",  name: "Serie A",        slug: "serie-a",        flag: "🇮🇹",          currentSeason: SEASON },
-  { code: "FL1", name: "Ligue 1",        slug: "ligue-1",        flag: "🇫🇷",          currentSeason: SEASON },
+  { code: "PL", name: "Premier League",         slug: "premier-league", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", currentSeason: SEASON },
+  { code: "CL", name: "UEFA Champions League",  slug: "champions-league", flag: "🇪🇺",       currentSeason: SEASON },
 ];
 
 const BY_SLUG = new Map<string, LeagueMeta>(

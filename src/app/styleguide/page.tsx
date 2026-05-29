@@ -302,7 +302,7 @@ export default async function StyleguidePage() {
             status="TIMED"
             homeScore={null}
             awayScore={null}
-            leagueCode="PD"
+            leagueCode="CL"
             matchday={34}
             tag="El Clásico"
             kickoffTime="21:00"
@@ -315,7 +315,7 @@ export default async function StyleguidePage() {
             status="IN_PLAY"
             homeScore={1}
             awayScore={0}
-            leagueCode="BL1"
+            leagueCode="CL"
             matchday={32}
             tag="Title decider"
             minute={67}
@@ -565,7 +565,7 @@ export default async function StyleguidePage() {
 
               <SubLabel>Without chapters — live audio (no chapter nav, no tick marks)</SubLabel>
               <AudioPlayer
-                title="Bundesliga Matchday 33 — Bayern seal the title in Munich"
+                title="Champions League Matchday 6 — Arsenal seal top spot in the league phase"
                 host="Marina Reis"
                 audioUrl={TEST_AUDIO}
               />

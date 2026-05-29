@@ -48,7 +48,7 @@ export default function FilterBar() {
             ))}
           </div>
           <div className="hidden md:flex items-center gap-3 text-[11px] font-mono uppercase tracking-[0.12em] text-ink3 whitespace-nowrap shrink-0">
-            <span>{LEAGUE_META.length} leagues</span>
+            <span>{LEAGUE_META.length} competitions</span>
             <span className="text-rule2">·</span>
             <span>Yesterday</span>
           </div>

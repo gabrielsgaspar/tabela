@@ -15,7 +15,7 @@ import type {
 export interface EditorialContext {
   date: string;        // YYYY-MM-DD UTC
   leagueCode: LeagueCode;
-  leagueName: string;  // "Premier League", "La Liga", etc.
+  leagueName: string;  // "Premier League", "UEFA Champions League"
 }
 
 // ---- Inputs -------------------------------------------------------------
@@ -105,9 +105,6 @@ export interface DayHtmlData {
 // ---- Constants ----------------------------------------------------------
 
 export const LEAGUE_NAMES: Record<LeagueCode, string> = {
-  PL:  "Premier League",
-  PD:  "La Liga",
-  BL1: "Bundesliga",
-  SA:  "Serie A",
-  FL1: "Ligue 1",
+  PL: "Premier League",
+  CL: "UEFA Champions League",
 };

@@ -28,9 +28,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tabela — The morning paper for European football",
+  title: "Tabela — The morning paper for English and European football",
   description:
-    "A daily editorial briefing on the Premier League, La Liga, Bundesliga, Serie A, and Ligue 1.",
+    "A daily editorial briefing on the Premier League and the UEFA Champions League.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

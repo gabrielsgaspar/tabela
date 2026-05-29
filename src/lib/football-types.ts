@@ -56,9 +56,13 @@ export interface ScorersResponse {
   scorers: ScorerEntry[];
 }
 
-export type LeagueCode = "PL" | "PD" | "BL1" | "SA" | "FL1";
+// Tabela's scope (2026-05-29, DECISIONS.md): the Premier League and the UEFA
+// Champions League its clubs compete in. The four other domestic leagues
+// (PD/BL1/SA/FL1) were dropped from the app; their Supabase rows are left in
+// place but no longer fetched or surfaced. `CL` is competition id 2001.
+export type LeagueCode = "PL" | "CL";
 
-export const LEAGUES: readonly LeagueCode[] = ["PL", "PD", "BL1", "SA", "FL1"];
+export const LEAGUES: readonly LeagueCode[] = ["PL", "CL"];
 
 // Phase 3: StandingsResponse type will be defined once the Supabase schema is in place.
 // The /standings endpoint is fetched in Phase 1 but typed as `unknown` until then.

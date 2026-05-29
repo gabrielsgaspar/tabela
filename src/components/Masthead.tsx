@@ -93,7 +93,7 @@ export default function Masthead({
                 <span className="gng-dot" />
               </span>
               <p className="text-[13px] md:text-[15px] text-ink2 font-serif italic">
-                The morning paper for European football.
+                The morning paper for English and European football.
               </p>
             </div>
           </div>

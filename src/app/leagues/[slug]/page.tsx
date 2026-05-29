@@ -195,8 +195,12 @@ export default async function LeaguePage({
         <div className="max-w-content mx-auto px-5 md:px-8 py-12 md:py-16">
           <SectionHeader
             eyebrow="Standings"
-            title="The full table"
-            deck="Tap a row to expand. The coloured strip on the left marks European and relegation zones."
+            title={league.code === "CL" ? "The league phase" : "The full table"}
+            deck={
+              league.code === "CL"
+                ? "Tap a row to expand. The coloured strip marks the round-of-16, play-off, and elimination places in the 36-team league phase."
+                : "Tap a row to expand. The coloured strip on the left marks European and relegation zones."
+            }
           />
           {standingsRows.length > 0 ? (
             <FullStandingsTable rows={standingsRows} leagueCode={league.code} />

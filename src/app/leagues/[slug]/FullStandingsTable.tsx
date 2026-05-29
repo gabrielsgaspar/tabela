@@ -3,13 +3,18 @@
 // FullStandingsTable — interactive standings table for the league page.
 //
 // Client component: rows expand on click (useState) to show form pips and a
-// link to the team page. Zone colours (UCL, UEL, play-off, relegation) are
-// rendered as a 3px coloured strip on the left of each row.
+// link to the team page. Zone colours are rendered as a 3px coloured strip on
+// the left of each row.
 //
-// Zone config follows the actual league qualification rules for 2025-26:
-//   PL  : 1-4 UCL, 5-6 UEL, 18-20 rel
-//   BL1 : 1-4 UCL, 5 UEL, 16 play-off, 17-18 rel
-//   Others (PD, SA, FL1): 1-4 UCL, 5 UEL, 18-20 rel
+// Tabela's scope is the Premier League and the Champions League, so the zone
+// meanings differ by competition:
+//   PL : 1-4 UCL, 5-6 UEL, 18-20 relegation (domestic European/drop places)
+//   CL : 1-8 direct to round of 16, 9-24 knockout play-off, 25-36 eliminated
+//        (the single 36-team "league phase" introduced in 2024-25)
+// The three strip colours are reused across both (green / mustard / crimson);
+// the legend labels are competition-aware. The Champions League only has a
+// table during the league phase — knockout rounds report no standings, and the
+// league page already falls back to "Standings not available yet." in that case.
 //
 // Columns (desktop): zone strip | Pos | Crest | Name | P | W | D | L | GF | GA | Pts
 // Columns (mobile):  zone strip | Pos | Crest | Name | Pts
@@ -22,28 +27,31 @@ import type { StandingTableEntry } from "@/lib/query-types";
 
 type Zone = "ucl" | "uel" | "playoff" | "rel" | null;
 
+// Each band is an inclusive position range. All optional so a competition can
+// define only the bands that apply to it (CL has no separate UEL band).
 interface ZoneRule {
-  ucl: [number, number];   // inclusive position range
-  uel: [number, number];
-  playoff?: number;        // single position (BL1 only)
-  rel: [number, number];
+  ucl?: [number, number];
+  uel?: [number, number];
+  playoff?: [number, number];
+  rel?: [number, number];
 }
 
 const ZONE_RULES: Record<string, ZoneRule> = {
-  PL:  { ucl: [1, 4], uel: [5, 6],  rel: [18, 20] },
-  BL1: { ucl: [1, 4], uel: [5, 5],  playoff: 16, rel: [17, 18] },
-  PD:  { ucl: [1, 4], uel: [5, 5],  rel: [18, 20] },
-  SA:  { ucl: [1, 4], uel: [5, 5],  rel: [18, 20] },
-  FL1: { ucl: [1, 4], uel: [5, 5],  rel: [18, 20] },
+  PL: { ucl: [1, 4], uel: [5, 6], rel: [18, 20] },
+  CL: { ucl: [1, 8], playoff: [9, 24], rel: [25, 36] },
 };
+
+function inRange(pos: number, range?: [number, number]): boolean {
+  return range != null && pos >= range[0] && pos <= range[1];
+}
 
 function zoneFor(pos: number, leagueCode: string): Zone {
   const rule = ZONE_RULES[leagueCode];
   if (!rule) return null;
-  if (pos >= rule.ucl[0] && pos <= rule.ucl[1]) return "ucl";
-  if (pos >= rule.uel[0] && pos <= rule.uel[1]) return "uel";
-  if (rule.playoff != null && pos === rule.playoff) return "playoff";
-  if (pos >= rule.rel[0] && pos <= rule.rel[1]) return "rel";
+  if (inRange(pos, rule.ucl)) return "ucl";
+  if (inRange(pos, rule.uel)) return "uel";
+  if (inRange(pos, rule.playoff)) return "playoff";
+  if (inRange(pos, rule.rel)) return "rel";
   return null;
 }
 
@@ -237,14 +245,21 @@ export default function FullStandingsTable({
         })}
       </ul>
 
-      {/* Zone legend */}
+      {/* Zone legend — labels are competition-aware. */}
       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-[11px] font-mono uppercase tracking-[0.12em] text-ink3">
-        <LegendItem color="#0F3D2E" label="Champions League" />
-        <LegendItem color="#1A5A45" label="Europa League" />
-        {leagueCode === "BL1" && (
-          <LegendItem color="#D4A24C" label="Play-off" />
+        {leagueCode === "CL" ? (
+          <>
+            <LegendItem color="#0F3D2E" label="Round of 16" />
+            <LegendItem color="#D4A24C" label="Knockout play-off" />
+            <LegendItem color="#B33A2E" label="Eliminated" />
+          </>
+        ) : (
+          <>
+            <LegendItem color="#0F3D2E" label="Champions League" />
+            <LegendItem color="#1A5A45" label="Europa League" />
+            <LegendItem color="#B33A2E" label="Relegation" />
+          </>
         )}
-        <LegendItem color="#B33A2E" label="Relegation" />
       </div>
     </div>
   );

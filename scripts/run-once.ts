@@ -64,10 +64,7 @@ interface DailyOutput {
 
 const LEAGUE_NAMES: Record<LeagueCode, string> = {
   PL: "Premier League",
-  PD: "La Liga",
-  BL1: "Bundesliga",
-  SA: "Serie A",
-  FL1: "Ligue 1",
+  CL: "UEFA Champions League",
 };
 
 // ---- Main ----------------------------------------------------------------

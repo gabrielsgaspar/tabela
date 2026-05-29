@@ -55,6 +55,13 @@ interface TestCase {
   primaryPattern: "streak" | "h2h" | "control";
 }
 
+// Scope note (2026-05-29): Tabela narrowed to Premier League + Champions League.
+// The original eval set included curated cases in Serie A, Ligue 1, La Liga, and
+// Bundesliga. Those leagues are no longer in scope and their cases were removed
+// rather than re-pointed — the rationales describe real historical matches, and
+// fabricating PL/CL equivalents would violate the project's no-invented-data rule.
+// Only the genuine Premier League cases remain. Add CL cases here once the CL
+// backfill (Phase D) has populated match_results with real Champions League history.
 const TEST_CASES: TestCase[] = [
   {
     date: "2024-08-24",
@@ -64,46 +71,11 @@ const TEST_CASES: TestCase[] = [
     primaryPattern: "control",
   },
   {
-    date: "2024-12-28",
-    league: "SA",
-    rationale:
-      "Atalanta entering with W×11 — the longest winning streak in the dataset. Atalanta vs Lazio ended 1-1 (streak broken). Lazio vs Verona also has H2H 4W-0L. Rich SA day for history.",
-    primaryPattern: "streak",
-  },
-  {
-    date: "2025-04-19",
-    league: "FL1",
-    rationale:
-      "Two simultaneous massive streaks in Ligue 1: Montpellier L×9 (lost 1-5 vs Marseille) and PSG W×9 (won 2-1 vs Le Havre). Tests multi-team streak detection on the same day.",
-    primaryPattern: "streak",
-  },
-  {
-    date: "2025-09-27",
-    league: "PD",
-    rationale:
-      "Real Madrid entering with W×9, then lost 2-5 to Atletico in the Derbi Madrileño. Dramatic end to a dominant run — tests whether the model grounds the upset in historical context.",
-    primaryPattern: "streak",
-  },
-  {
-    date: "2025-11-01",
-    league: "BL1",
-    rationale:
-      "Bayern W×10 at home to Leverkusen (won 3-0). Bayern vs Stuttgart H2H is 4W-0L (Stuttgart also plays this weekend). Tests sustained dominant form narrative.",
-    primaryPattern: "streak",
-  },
-  {
     date: "2025-12-30",
     league: "PL",
     rationale:
       "Two streak-breaking moments: Wolverhampton L×11 vs Man United (D 1-1, streak ends); Aston Villa W×8 vs Arsenal (L 1-4, streak ends). Tests whether both are captured.",
     primaryPattern: "streak",
-  },
-  {
-    date: "2026-04-03",
-    league: "FL1",
-    rationale:
-      "PSG vs Toulouse: 3 prior H2H meetings all won by Toulouse — extraordinary for Ligue 1's dominant club to have lost every prior meeting. Primary test for H2H pattern recognition.",
-    primaryPattern: "h2h",
   },
 ];
 

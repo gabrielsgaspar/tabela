@@ -8,7 +8,7 @@
 //
 // Glyphs:
 //   day_overview    — day number extracted from date (e.g. date "2026-05-06" → "6")
-//   league_overview — league_code (e.g. "PL", "BL1")
+//   league_overview — league_code (e.g. "PL", "CL")
 //
 // Size variants:
 //   lg — full column width, max 480px, used in the page hero

@@ -1,5 +1,5 @@
 // Core daily pipeline logic — fetches, persists, and generates editorials for
-// one UTC date across all five leagues.
+// one UTC date across the Premier League and the Champions League.
 //
 // Used by:
 //   src/trigger/daily-report.ts  (scheduled Trigger.dev task)

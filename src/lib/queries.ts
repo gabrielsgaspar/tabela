@@ -85,8 +85,8 @@ export async function getMatchCaptionsForDate(
 // this query efficiently.
 //
 // Upgrade path: if we ever have > 2 snapshot rows per league in the result
-// window (i.e. > 10 rows across 5 leagues), increase the LIMIT accordingly,
-// or move to a Postgres view with DISTINCT ON.
+// window (i.e. > 4 rows across the two competitions), increase the LIMIT
+// accordingly, or move to a Postgres view with DISTINCT ON.
 
 export async function getLatestSeasonStats(
   db: DB

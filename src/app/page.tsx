@@ -1,6 +1,7 @@
 // Home page — server-rendered, reads from Supabase via anon client.
 // Shows the latest day overview, yesterday's match cards (with AI captions),
-// season-to-date top scorers, and race-watch standings for all five leagues.
+// season-to-date top scorers, and race-watch standings for the Premier League
+// and the Champions League.
 // ?league=<slug> filters match groups, stat leaders, and race watch server-side.
 
 import { Suspense } from "react";
@@ -226,7 +227,7 @@ export default async function HomePage({
           <SectionHeader
             eyebrow="Season-to-date"
             title="The leaders"
-            deck="Top scorer in each of the five leagues this season."
+            deck="Top scorer in the Premier League and the Champions League this season."
           />
 
           <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12">

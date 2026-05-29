@@ -63,7 +63,7 @@ async function apiFetch<T>(path: string): Promise<T> {
 
 /**
  * Fetch all matches for a league on a single UTC date.
- * @param league  One of the five supported league codes (PL, PD, BL1, SA, FL1).
+ * @param league  A supported league code (PL or CL).
  * @param date    YYYY-MM-DD string in UTC.
  */
 export async function getMatches(
@@ -77,7 +77,7 @@ export async function getMatches(
 
 /**
  * Fetch the current season top scorers for a league (free tier: goals + assists).
- * @param league  One of the five supported league codes.
+ * @param league  A supported league code (PL or CL).
  * @param limit   How many scorers to return. Default 20 (API max on free tier).
  */
 export async function getScorers(
