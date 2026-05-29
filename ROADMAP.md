@@ -141,7 +141,7 @@ Build phases for Tabela. Mark `← CURRENT` next to the active phase. Each phase
 
 ---
 
-## Phase 6 — Polish ← CURRENT
+## Phase 6 — Polish ✅ DONE (superseded by Phase 7 re-scope)
 
 **Goal:** audit what exists for launch-readiness, fix what surfaces, then execute the
 launch sequence (tier upgrade, voice swap, schedule unpause, first user).
@@ -169,3 +169,50 @@ launch sequence (tier upgrade, voice swap, schedule unpause, first user).
 "Follow a team", country flag filter, season leaderboards, open graph share images.
 
 **Done when:** Tabela feels like a finished product and you'd send the link to a friend.
+
+**Note:** the Phase 6 pre-launch sequence (steps 1–5 above) was not executed
+before the Phase 7 re-scope landed. Those operational steps remain valid and
+should be completed after the Phase 7 CL backfill, retargeted at the PL + CL
+scope.
+
+---
+
+## Phase 7 — Refocus on Premier League + Champions League ← CURRENT
+
+**Goal:** re-scope Tabela from five domestic leagues to the Premier League and
+the UEFA Champions League. Full plan and rationale in `PLAN.md` and
+`DECISIONS.md` (2026-05-29).
+
+A 2026-05-29 review found the committed repo did not build (nine web-layer
+modules absent from disk and from all git history) and could not install
+(stale lockfile). Both were fixed before any scope change, so the
+reconstruction could be proven faithful at the old scope first.
+
+- [x] **Phase A — Make the repo build again.** Regenerated the lockfile;
+  reconstructed the nine missing modules; recreated `env.example`. `typecheck`,
+  `lint`, `build` green at the original five-league scope.
+- [x] **Phase B — Verify Champions League data.** Confirmed CL (competition
+  2001) is on the free tier and that 2024-25+ uses a single 36-team league
+  phase. Findings in `DECISIONS.md`; runnable `scripts/probe-cl.ts` left for
+  the maintainer to confirm against the live API with a real token.
+- [x] **Phase C — Scope rewrite to PL + CL.** `LeagueCode = "PL" | "CL"`;
+  `LEAGUES`/`LEAGUE_META`/`LEAGUE_NAMES` trimmed; editorial prompts, metadata,
+  and UI copy retargeted (VOICE.md rules unchanged); CL league-phase standings
+  zones (1–8 / 9–24 / 25–36) with a results-only knockout fallback. The four
+  dropped leagues' `/leagues/<slug>` routes now 404; their Supabase rows are
+  left in place (no migration, no deletion).
+- [x] **Phase D — Adapt backfill + run-once scripts.** The scripts and the
+  daily pipeline already key off `LEAGUES`, so they fetch CL with no functional
+  change; headers/usage notes aligned to the new scope and CL knockout
+  behaviour documented. The backfill *run* needs maintainer secrets.
+- [x] **Phase E — Verify, document, ship.** `typecheck`/`lint`/`build` green;
+  `/leagues/champions-league` resolves and the dropped slugs 404; `README.md`,
+  `ROADMAP.md`, `DATA.md`, `DECISIONS.md` updated.
+
+**Maintainer-owned (needs credentials/spend, out of scope for the code work):**
+provide secrets in `.env.local`, run `scripts/probe-cl.ts` then the CL
+backfill, then the Phase 6 pre-launch sequence (ElevenLabs tier, voice swap,
+production audio run, `/listen` ISR fix, schedule unpause) retargeted at PL + CL.
+
+**Done when:** the live site serves PL + CL content under the new scope. Code
+work ✓ complete; data backfill + ops remain maintainer steps.

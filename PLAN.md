@@ -1,6 +1,8 @@
 # PLAN.md — Phase 7: Refocus on Premier League + Champions League
 
-> Status marker: **Phases A–C complete · Phase D in progress**. Update as phases complete.
+> Status marker: **All code phases (A–E) complete**. Remaining work is
+> maintainer-owned (secrets, CL backfill, ops) — see "What only the maintainer
+> can do" below.
 
 ## Goal
 
@@ -75,14 +77,14 @@ Autonomous code change.
 - The four domestic leagues fall out of scope automatically once removed from
   `LEAGUES` / `LEAGUE_META` / `LEAGUE_NAMES`.
 
-### Phase D — Backfill + generate CL content ← CURRENT
+### Phase D — Backfill + generate CL content ✓ COMPLETE (code) · run is maintainer-owned
 Requires `FOOTBALL_DATA_TOKEN`, Supabase service key, Anthropic key.
 
 - Adapt `scripts/historical-backfill.ts` / `scripts/run-once.ts` for CL.
 - Populate `match_results` (team history) and generate editorials for recent
   CL dates so the live site has content under the new scope.
 
-### Phase E — Verify, document, ship
+### Phase E — Verify, document, ship ✓ COMPLETE
 
 - Re-run typecheck / lint / build; run the dev server and visually verify the
   PL and CL pages; confirm `/leagues/champions-league` returns 200.

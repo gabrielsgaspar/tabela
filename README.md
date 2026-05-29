@@ -1,14 +1,19 @@
 # Tabela
 
-A daily editorial briefing on the top five European football leagues.
+A daily editorial briefing on the Premier League and the UEFA Champions League.
 
 Every morning a scheduled task fetches the previous day's matches, updates
 season statistics, asks Claude to write a short editorial in a warm, allusive
 voice, generates an audio version, and publishes the result to a Next.js site.
 
-## Leagues
+## Competitions
 
-Premier League · La Liga · Bundesliga · Serie A · Ligue 1
+Premier League · UEFA Champions League
+
+The app is scoped to the English top flight and the premier European
+competition its clubs compete in. The four other major domestic leagues
+(La Liga, Bundesliga, Serie A, Ligue 1) are out of scope; see `DECISIONS.md`
+(2026-05-29) for the rationale.
 
 ## Stack
 
@@ -16,11 +21,14 @@ Next.js 16 · Trigger.dev v4 · Supabase (Postgres + Storage) · Anthropic Claud
 
 ## Status
 
-**Phase 6 — pre-launch.** All five leagues are running, audio synthesis is
-wired, and the daily schedule is configured. Completing the final operational
-checklist (ElevenLabs upgrade, production audio verification, ISR fix) before
-unpausing the schedule. See `ROADMAP.md` for the current milestone and
-`DECISIONS.md` for architectural context.
+**Phase 7 — refocus on Premier League + Champions League.** The app was
+re-scoped from five domestic leagues to the Premier League and the UEFA
+Champions League. The web layer, editorial prompts, and data scripts all
+target the new scope, and the repo builds clean (`typecheck`, `lint`,
+`build`). Remaining work is maintainer-owned: running the CL backfill with
+real credentials, then the pre-launch operational checklist (ElevenLabs
+upgrade, production audio verification, schedule unpause). See `ROADMAP.md`
+for the current milestone and `DECISIONS.md` for architectural context.
 
 ## Project structure
 

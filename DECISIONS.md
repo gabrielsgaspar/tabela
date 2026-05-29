@@ -640,4 +640,44 @@ PL + CL scope; richer data is a future decision with its own trigger.
 
 ---
 
+### 2026-05-29 — Phases C–E: re-scope code work complete
+
+**Decision.** The PL + CL re-scope is implemented end-to-end in code and the
+repo is green (`typecheck`, `lint`, `build`). What landed:
+
+- **Types/registry (Phase C).** `LeagueCode = "PL" | "CL"`; `LEAGUES`,
+  `LEAGUE_META`, and `LEAGUE_NAMES` trimmed to the two competitions.
+  `leagueByCode` was widened to accept `string` (DB rows are typed `string`)
+  and returns `undefined` for out-of-registry codes — so leftover rows from the
+  dropped leagues read back harmlessly. `/leagues/champions-league` resolves;
+  the four dropped slugs hit `notFound()` → 404.
+- **Standings (Phase C).** `FullStandingsTable` gained CL league-phase zone
+  rules (1–8 round of 16, 9–24 knockout play-off, 25–36 eliminated) with a
+  league-aware legend, alongside the existing PL UCL/UEL/relegation bands. The
+  zone logic is data-driven (`ZONE_RULES` + `inRange`) and degrades to a
+  results-only view when no `TOTAL` standings table exists (knockouts).
+- **Copy/prompts (Phase C).** Metadata, masthead, filter bar, and the editorial
+  prompts (VOICE_BLOCK, day-overview tool + format) retargeted to "Premier
+  League and UEFA Champions League". **VOICE.md rules unchanged.** Dropped-league
+  eval cases in `scripts/eval-history-v1.ts` were removed rather than re-pointed,
+  because their rationales describe real historical matches and fabricating
+  PL/CL equivalents would violate the no-invented-data rule.
+- **Scripts/pipeline (Phase D).** `historical-backfill.ts`, `run-once.ts`,
+  `backfill.ts`, and `src/trigger/pipeline.ts` all already key off `LEAGUES` /
+  `LEAGUE_NAMES` and store standings as opaque JSON, so they fetch and persist
+  CL with no functional change — only headers/usage notes were aligned and CL
+  knockout behaviour documented (null matchday persists; `match_results.matchday`
+  is nullable).
+- **Docs (Phase E).** `README.md`, `ROADMAP.md` (new Phase 7), and `DATA.md`
+  (in-scope vs. retained-but-unsurfaced competitions; PL id 2021, CL id 2001)
+  updated.
+
+**What remains (maintainer-owned, needs credentials/spend — not code).** Run
+`scripts/probe-cl.ts` to confirm CL's live `stage`/`type` strings, then the CL
+backfill to populate `match_results` + generate CL editorials; then the Phase 6
+pre-launch ops sequence retargeted at PL + CL (ElevenLabs tier, voice swap,
+production audio run, `/listen` ISR fix, schedule unpause).
+
+---
+
 <!-- Add new entries above this line, newest at top -->

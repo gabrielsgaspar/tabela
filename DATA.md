@@ -6,7 +6,8 @@ Sources, shapes, storage. Read this before writing anything that touches match d
 
 We use [Football-Data.org](https://www.football-data.org/) on the free tier for the MVP.
 
-**Why:** free, ungated for the five leagues we care about, no credit card.
+**Why:** free, ungated for the competitions we care about (Premier League and
+UEFA Champions League), no credit card.
 
 **Limits to plan around:**
 
@@ -25,17 +26,33 @@ Header: `X-Auth-Token: $FOOTBALL_DATA_TOKEN`
 
 `https://api.football-data.org/v4`
 
-## Leagues
+## Competitions (in scope)
+
+| Code | Competition | Football-Data.org ID | Scope |
+|------|-------------|----------------------|-------|
+| `PL` | Premier League | 2021 | English top flight |
+| `CL` | UEFA Champions League | 2001 | Premier European club competition |
+
+> **Scope (2026-05-29, see `DECISIONS.md`).** Tabela covers the Premier League
+> and the UEFA Champions League its clubs compete in. The CL league phase from
+> 2024-25 onward is a single 36-team table (no groups); positions 1–8 reach the
+> round of 16, 9–24 the knockout play-off, 25–36 are eliminated. Knockout-round
+> matches may report a null matchday.
+
+### Out of scope (data retained, not surfaced)
+
+These four domestic leagues were part of the original MVP and still have rows
+in Supabase, but the app no longer fetches or surfaces them. Their codes are
+kept here for reference only.
 
 | Code | League | Country |
 |------|--------|---------|
-| `PL`  | Premier League | England |
 | `PD`  | La Liga (Primera División) | Spain |
 | `BL1` | Bundesliga | Germany |
 | `SA`  | Serie A | Italy |
 | `FL1` | Ligue 1 | France |
 
-> **Note.** `SA` is Italian Serie A. Brazilian Série A is `BSA` and is **not** on the free tier. Tabela's MVP scope is the top five European leagues.
+> **Note.** `SA` is Italian Serie A. Brazilian Série A is `BSA` and is **not** on the free tier.
 
 ## Endpoints we use
 
@@ -125,6 +142,6 @@ Without this, Claude either invents context or stays generic. Plan it from the s
 
 ## Open questions
 
-- Does the free tier rate-limit allow all five leagues fetched in one run? (10 req/min × ~3 endpoints × 5 leagues = 15 requests; should fit in 2 min with sequential fetches.)
+- Does the free tier rate-limit allow both competitions fetched in one run? (10 req/min × ~3 endpoints × 2 competitions = 6 requests; fits comfortably in one minute with sequential fetches.)
 - Top scorers endpoint — does it include assists on free tier? (Confirmed yes per docs, verify in Phase 1.)
 - How do we handle a partial-data day (some leagues fetch fine, one fails)? (Phase 1 should design for graceful degradation.)
