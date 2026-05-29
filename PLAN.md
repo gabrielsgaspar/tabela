@@ -1,6 +1,6 @@
 # PLAN.md — Phase 7: Refocus on Premier League + Champions League
 
-> Status marker: **Phase A complete · Phase B in progress**. Update as phases complete.
+> Status marker: **Phases A–C complete · Phase D in progress**. Update as phases complete.
 
 ## Goal
 
@@ -49,7 +49,7 @@ No secrets required; fully reproducible offline.
   at the *current* five-league scope. Building before changing scope proves the
   reconstruction is faithful rather than a fresh invention.
 
-### Phase B — Verify Champions League data ← CURRENT
+### Phase B — Verify Champions League data ✓ COMPLETE
 Requires `FOOTBALL_DATA_TOKEN` in `.env.local`.
 
 - Probe `/competitions/CL/{matches,standings,scorers}` for a recent date.
@@ -59,7 +59,7 @@ Requires `FOOTBALL_DATA_TOKEN` in `.env.local`.
 - Record findings in `DECISIONS.md`. This determines exactly how the standings
   table and race-watch render for CL.
 
-### Phase C — Scope rewrite to PL + CL
+### Phase C — Scope rewrite to PL + CL ✓ COMPLETE
 Autonomous code change.
 
 - `src/lib/football-types.ts`: `LeagueCode = "PL" | "CL"`; `LEAGUES = ["PL", "CL"]`.
@@ -75,7 +75,7 @@ Autonomous code change.
 - The four domestic leagues fall out of scope automatically once removed from
   `LEAGUES` / `LEAGUE_META` / `LEAGUE_NAMES`.
 
-### Phase D — Backfill + generate CL content
+### Phase D — Backfill + generate CL content ← CURRENT
 Requires `FOOTBALL_DATA_TOKEN`, Supabase service key, Anthropic key.
 
 - Adapt `scripts/historical-backfill.ts` / `scripts/run-once.ts` for CL.

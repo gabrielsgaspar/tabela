@@ -1,8 +1,15 @@
 // Historical backfill script — Phase 3.5.
 //
-// Fetches match data for the five leagues over a date range, persisting into:
+// Fetches match data for every in-scope competition (LEAGUES in
+// src/lib/football-types.ts — currently Premier League + Champions League)
+// over a date range, persisting into:
 //   match_days    — one row per (date, league), raw match payload
 //   match_results — one row per FINISHED match, denormalized for team-history queries
+//
+// CL note: the script is league-agnostic — it iterates LEAGUES and groups the
+// /matches response by UTC date, so the single 36-team league phase and the
+// knockout rounds are both captured. CL knockout matches may report a null
+// matchday; match_results.matchday is nullable, so those rows persist cleanly.
 //
 // Fetching strategy: one API call per (league, calendar month). Each monthly
 // response is split by date; each date is written atomically to both tables
@@ -17,9 +24,11 @@
 //   pnpm exec tsx --env-file=.env.local scripts/historical-backfill.ts \
 //     --from 2024-08-01 --to 2026-05-04
 //
-//   # Three-season backfill (2023/24 confirmed accessible on free tier)
+//   # Earlier seasons (free-tier history depth varies per competition; the
+//   # single-table CL league phase only exists from 2024-25 — earlier CL
+//   # seasons use the old group format and are out of scope here)
 //   pnpm exec tsx --env-file=.env.local scripts/historical-backfill.ts \
-//     --from 2023-08-01
+//     --from 2024-08-01
 //
 //   # Surgical retry — paste failed dates from end-of-run summary
 //   pnpm exec tsx --env-file=.env.local scripts/historical-backfill.ts \

@@ -1,5 +1,6 @@
-// Fetch one day's worth of match data across all five leagues and write the
-// result to output/YYYY-MM-DD.json.
+// Fetch one day's worth of match data across the in-scope competitions
+// (Premier League + Champions League) and write the result to
+// output/YYYY-MM-DD.json. Driven by LEAGUES in src/lib/football-types.ts.
 //
 // Usage:
 //   pnpm run-once                       # yesterday (UTC)
