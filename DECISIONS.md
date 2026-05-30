@@ -680,4 +680,41 @@ production audio run, `/listen` ISR fix, schedule unpause).
 
 ---
 
+### 2026-05-30 — Phase B closed: live CL probe results
+
+**Decision.** Ran `pnpm probe:cl` against the live Football-Data.org API with a
+real `FOOTBALL_DATA_TOKEN`, closing the open items from the 2026-05-29 Phase B
+entry. The defensive Phase C standings code is correct against the real shape —
+no changes needed. Raw output saved to `output/probe-cl.json`.
+
+**Confirmed against the live API (season 2025-26, competition id 2001, type `CUP`):**
+
+- **CL is on the free tier** — all four endpoints (`/competitions/CL`,
+  `/standings`, `/scorers`, `/matches`) returned 200.
+- **Standings: one group, 36 rows.** `type="TOTAL"`, `stage="GROUP_STAGE"`,
+  `group="League phase"`. The app filters standings on `type === "TOTAL"`, which
+  matches — so the league-phase table renders with no special-casing. (Note the
+  `stage` string is `GROUP_STAGE`, not `LEAGUE_STAGE` as the name might suggest;
+  the app does not branch on `stage`, so this is immaterial.)
+- **`form` is null on CL standings rows.** `FullStandingsTable`'s `FormPills`
+  already renders `—` for null form, so this degrades cleanly.
+- Row keys are exactly `StandingTableEntry`: `position, team, playedGames, form,
+  won, draw, lost, points, goalsFor, goalsAgainst, goalDifference` — no new type.
+- **Scorers** populate (leader Kylian Mbappé, 15 goals, 1 assist).
+- **Matches** report a `stage` (e.g. `FINAL`); the single-table league phase
+  exists from 2024-25 onward (the 2023-24 season in the payload still uses the
+  old `currentMatchday: 6` group format and is out of scope).
+
+**Still pending (infrastructure, not code).** The CL backfill + editorial
+generation could not run: `.env.local` points `NEXT_PUBLIC_SUPABASE_URL` at the
+local stack (`http://localhost:54321`), but neither the local Supabase services
+nor Docker were running, so there is no database to write to. Unblock by either
+(a) starting Docker + `supabase start` + applying migrations and re-running the
+backfill against local, or (b) pointing `.env.local` at the cloud Supabase
+project with its real anon/service keys. The `FOOTBALL_DATA_TOKEN` and
+`ANTHROPIC_API_KEY` in `.env.local` are real; the Supabase and ElevenLabs values
+are local/placeholder length.
+
+---
+
 <!-- Add new entries above this line, newest at top -->
