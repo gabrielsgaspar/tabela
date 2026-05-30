@@ -142,7 +142,15 @@ export interface PipelineResult {
   audioFailed: number;
 }
 
-export async function runDailyPipeline(date: string): Promise<PipelineResult> {
+// `leagues` defaults to the full in-scope set (LEAGUES). The scheduled
+// daily-report task and scripts/backfill.ts call it with no second argument,
+// so their behaviour is unchanged. A narrower set can be passed to regenerate
+// content for one competition only — e.g. the CL editorial backfill passes
+// ["CL"] so it never touches PL match_days, season_stats, or editorials.
+export async function runDailyPipeline(
+  date: string,
+  leagues: readonly LeagueCode[] = LEAGUES,
+): Promise<PipelineResult> {
   const db = createServerClient();
   const leaguesDataOk: LeagueCode[] = [];
   const leaguesDataFailed: LeagueCode[] = [];
@@ -159,7 +167,7 @@ export async function runDailyPipeline(date: string): Promise<PipelineResult> {
   type LeagueDataEntry = { matches: Match[]; scorers: ScorerEntry[] };
   const leagueData = new Map<LeagueCode, LeagueDataEntry>();
 
-  for (const league of LEAGUES) {
+  for (const league of leagues) {
     console.log(`[${league}] Fetching matches…`);
     try {
       const matchesResp = await getMatches(league, date);
