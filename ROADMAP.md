@@ -177,7 +177,7 @@ scope.
 
 ---
 
-## Phase 7 — Refocus on Premier League + Champions League ← CURRENT
+## Phase 7 — Refocus on Premier League + Champions League ✅ DONE (code)
 
 **Goal:** re-scope Tabela from five domestic leagues to the Premier League and
 the UEFA Champions League. Full plan and rationale in `PLAN.md` and
@@ -216,3 +216,67 @@ production audio run, `/listen` ISR fix, schedule unpause) retargeted at PL + CL
 
 **Done when:** the live site serves PL + CL content under the new scope. Code
 work ✓ complete; data backfill + ops remain maintainer steps.
+
+---
+
+## Expansion — Personalized, spoiler-safe briefings
+
+Full roadmap in [EXPANSION.md](./EXPANSION.md); per-workstream task list in
+[TASKS.md](./TASKS.md). Built WS0 → WS7 in the sequence in EXPANSION.md §11. Each
+workstream is shippable on its own and starts with an approved `PLAN.md`.
+
+### WS0 — Scope refactor + data-layer foundation ✅ DONE (code)
+
+**Goal:** competition set as a single `kind`-aware source of truth; fetch
+upcoming fixtures (for the WS4 preview); explicit per-competition failure signal.
+Plan in `PLAN.md`; decisions in `DECISIONS.md` (2026-06-04).
+
+- [x] `kind: "league" | "cup"` on the competition registry; `COMPETITIONS` +
+  `competitionKind()` exported from `src/lib/leagues.ts` (chose to extend the
+  existing registry over a new `config.ts` — see DECISIONS.md).
+- [x] `getUpcomingMatches()` added to `src/football/client.ts` (`SCHEDULED,TIMED`).
+- [x] Structured `[fetch_partial_failure]` log in the pipeline's Phase A catch.
+- [x] `scripts/probe-el.ts` + `pnpm probe:el` for the EL free-tier question.
+- [x] `typecheck` + `lint` green; no dropped-league codes leaked into `src/`.
+- [ ] **Maintainer:** run `pnpm probe:el` (and `pnpm probe:cl`) with a real token;
+  record EL's free-tier outcome in `DECISIONS.md` (EXPANSION.md §0.2 blocking
+  question). Then either activate EL (PLAN.md "EL activation") or launch PL + CL.
+
+**Next:** WS1 — accounts + preferences (auth, `app_user`/`follow`/`user_prefs`).
+
+### WS1 — Accounts and preferences ← CURRENT
+
+**Goal:** identity + stored preferences to personalize briefings and attribute
+events. Plan in `PLAN.md`; decisions in `DECISIONS.md` (2026-06-04). Supabase is
+the cloud project; all WS1 credentials are present in `.env.local`.
+
+Data layer (this turn — `typecheck` + `lint` green):
+- [x] `supabase/migrations/0004_accounts.sql` — `app_user` / `follow` /
+  `user_prefs` with owner-only RLS, `authenticated` grants, `user_prefs`
+  `updated_at` trigger, and a guarded NOTICE for `teams_followed`.
+- [x] `src/lib/database.types.ts` — three tables hand-added (reconcile via
+  `pnpm supabase:gen-types` after the migration applies).
+- [x] `src/lib/users.ts` — `getUserContext(db, userId)` with the cold-start guard.
+
+Maintainer / terminal-gated:
+- [x] `@supabase/ssr@0.10.3` installed (`corepack pnpm add`).
+- [x] `0004_accounts.sql` applied to the cloud DB via Supabase MCP (2026-06-05);
+  three tables + RLS verified; `database.types.ts` regenerated from live schema.
+- [x] `0005_harden_set_updated_at_search_path.sql` applied via MCP (2026-06-05);
+  security advisor confirms the function warning is cleared.
+- [ ] **Enable email magic-link Auth in the Supabase dashboard** (+ site/redirect
+  URL `http://localhost:3000`) — dashboard-only; the only step before runtime test.
+
+Auth UI sub-phase (built this turn — `typecheck` + `lint` + `next build` green):
+- [x] `@supabase/ssr` clients (`src/lib/auth/{env,server,client}.ts`) + session
+  refresh in `src/proxy.ts` (Next 16 renamed `middleware` → `proxy`).
+- [x] Magic-link sign-in (`/sign-in`), `/auth/callback` (PKCE code exchange),
+  `/auth/sign-out` (POST).
+- [x] Onboarding (`/onboarding`) → writes `app_user` + `user_prefs` + competition
+  `follow` rows, sets `onboarded_at`; auto-detects timezone. Team-following
+  deferred to a settings enhancement (competition follows satisfy "≥1 follow").
+
+Remaining to close WS1: enable magic-link in the dashboard, then runtime-verify
+the full sign-in → onboard → row-creation flow.
+
+**Next:** WS2 — spoiler-safe delivery layer (`spoiler.ts` linter + reveal-on-tap).

@@ -717,4 +717,128 @@ are local/placeholder length.
 
 ---
 
+### 2026-06-04 — EXPANSION WS0: scope registry, upcoming fixtures, EL gating
+
+Three decisions taken while implementing WS0 of `EXPANSION.md` (the first
+workstream of the personalization expansion). Full plan in `PLAN.md`.
+
+**Decision 1 — Extend `src/lib/leagues.ts` rather than create `src/lib/config.ts`.**
+EXPANSION.md R3 names a new `config.ts` as the single source of truth for scope.
+The repo already centralizes scope in two zero-churn places: `LeagueCode` +
+`LEAGUES` in `football-types.ts` (a zero-dependency module imported everywhere)
+and presentation metadata in `leagues.ts`. Added a `kind: "league" | "cup"`
+field to `LeagueMeta`, exported `COMPETITIONS` (alias of `LEAGUE_META`) as the
+documented entry point, and added a `competitionKind(code)` helper.
+
+*Alternatives.* (a) Create `config.ts` and migrate both registries into it —
+more churn, and a third file to keep in sync. (b) Put the registry in
+`leagues.ts` and have `football-types.ts` import it — creates a circular import
+(`leagues.ts` already imports `LeagueCode` from `football-types.ts`).
+
+*Rationale.* Satisfies R3's *intent* (one place to change scope) without a
+redundant file or a dependency cycle. Flagged here because it deviates from the
+literal letter of EXPANSION.md R3.
+
+**Decision 2 — EL stays out of the active set until the free-tier probe passes.**
+Kept `LeagueCode = "PL" | "CL"` and the live set at PL + CL. EXPANSION.md §0.2 /
+§10.4 forbid building EL-specific paths or shipping EL support that silently
+returns empty before the free-tier question is resolved. Shipped a runnable
+`scripts/probe-el.ts` (+ `pnpm probe:el`) so the maintainer can answer it with a
+real token; the decisive call is `GET /competitions/EL` (a 403/404 means
+not-free-tier). Activation after a passing probe is a one-entry config edit
+(see PLAN.md "EL activation"). **This blocking question is still open** pending a
+live run.
+
+**Decision 3 — `fetch_partial_failure` is a log line in WS0, an event row in WS7.**
+EXPANSION.md §2.1.3 ties the partial-failure warning to the WS7 `event` table,
+which does not exist yet. WS0 emits a structured, greppable
+`[fetch_partial_failure] league=… date=… reason=…` line from the pipeline's
+Phase A catch (graceful degradation itself already existed). The `event`-row
+insert is deferred to WS7-partial. No new table in WS0.
+
+**Also added.** `getUpcomingMatches(league, dateFrom, dateTo)` in
+`src/football/client.ts` (`status=SCHEDULED,TIMED`, returns the existing
+`MatchesResponse` shape) — needed by the WS4 preview; added now, wired later.
+
+---
+
+### 2026-06-04 — EXPANSION WS1: accounts and preferences (DB layer)
+
+Decisions taken while implementing the data layer of WS1 (`EXPANSION.md` §3).
+Plan in `PLAN.md`. The auth UI is a follow-on sub-phase; this entry covers the
+schema + helper that landed first.
+
+**Decision 1 — Auth library: `@supabase/ssr` + email magic-link, no passwords.**
+The Next.js App Router needs cookie-based sessions across server components,
+server actions, and middleware; `@supabase/ssr` is the supported path. New
+dependency (a library of the existing Supabase service, not a new paid service).
+Not yet installed — corepack's pnpm 11 trips on build-script approval in this
+environment, so the install is a maintainer step (`pnpm add @supabase/ssr`).
+
+**Decision 2 — `follow` supersedes `teams_followed`; old table not dropped yet.**
+Migration `0004_accounts.sql` adds `app_user` / `follow` / `user_prefs`.
+`teams_followed` predates auth, is empty, and is still referenced by
+`database.types.ts` + `FollowTeamCTA.tsx`, so dropping it is a later cleanup.
+No automatic data migration: `follow.user_id` FKs to `app_user`, so any orphan
+`teams_followed` row would fail the insert; the migration raises a NOTICE if
+rows exist so a maintainer can migrate by hand.
+
+**Decision 3 — Account rows are provisioned by the app at onboarding, not by an
+`auth.users` trigger.** EXPANSION §3.2 writes `app_user`/`user_prefs`/`follow`
+from the onboarding flow. A `SECURITY DEFINER` trigger on `auth.users` is more
+fragile under RLS and harder to reason about; the explicit app path is testable.
+
+**Decision 4 — `getUserContext(db, userId)` takes the client as an argument.**
+So the one helper serves both the WS3 pipeline fan-out (service-role client,
+bypasses RLS) and the web app (the user's RLS-scoped session) without knowing
+its auth context. Includes the cold-start guard: a user who follows no
+competition is briefed on all in-scope competitions.
+
+**Applied 2026-06-05 via the Supabase MCP** (the local `supabase` CLI bin failed
+to build under corepack pnpm 11, so `pnpm supabase:push` was unavailable). The
+three tables + RLS now exist on the cloud project (`ksmgtrbgrvqfhiijqsyd`);
+`database.types.ts` was regenerated from the live schema (replacing the
+hand-added stopgap). `@supabase/ssr@0.10.3` is installed. The 2026-05-29
+localhost/Docker blocker no longer applies (project is the cloud instance).
+
+**Security advisor follow-ups (post-DDL).** The advisor flagged
+`set_updated_at()` for a mutable `search_path` — staged as
+`0005_harden_set_updated_at_search_path.sql` (pins `search_path = ''`), **not yet
+applied** (the WS1 sign-off authorized 0004 only). Two pre-existing findings are
+unrelated to WS1 and left as-is for now: `teams_followed` has RLS enabled with no
+policy (INFO; empty, deprecated), and the public `episodes` storage bucket allows
+listing (WARN; audio storage).
+
+---
+
+### 2026-06-05 — EXPANSION WS1: auth UI sub-phase
+
+Built on the WS1 data layer (same day). Migrations `0004` + `0005` are live;
+`@supabase/ssr@0.10.3` is installed. `typecheck` + `lint` + `next build` green.
+
+**Decision 1 — `src/proxy.ts`, not `src/middleware.ts`.** Next 16.2.4 deprecated
+the `middleware` file convention in favour of `proxy` (same signature + matcher).
+Adopted `proxy` now to avoid shipping a deprecation warning. The function does
+session refresh only — it does not gate routes; pages self-guard (e.g.
+`/onboarding` redirects to `/sign-in`).
+
+**Decision 2 — magic-link via PKCE code exchange at `/auth/callback`.**
+`signInWithOtp` with `emailRedirectTo=…/auth/callback`; the callback route calls
+`exchangeCodeForSession`. This is the documented server-side `@supabase/ssr`
+flow and works with Supabase's default email template. Auth client naming avoids
+collision with `src/lib/supabase.ts`: the new cookie/session clients are
+`createAuthServerClient` / `createAuthBrowserClient` under `src/lib/auth/`.
+
+**Decision 3 — onboarding writes competition follows; team-follow deferred.**
+The onboarding flow writes `app_user` + `user_prefs` + one `follow` row per
+selected competition (default: all in scope), satisfying the "≥1 follow"
+acceptance. A team-follow picker needs a team list + crests UI and is deferred to
+a settings enhancement; the `follow` schema already supports `kind='team'`.
+
+**Still open to close WS1:** enable email magic-link in the Supabase dashboard
+(dashboard-only), then runtime-verify sign-in → onboard → row creation + RLS
+isolation between two users.
+
+---
+
 <!-- Add new entries above this line, newest at top -->

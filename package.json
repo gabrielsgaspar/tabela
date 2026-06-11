@@ -12,6 +12,7 @@
     "lint": "eslint src/",
     "run-once": "tsx --env-file=.env.local scripts/run-once.ts",
     "probe:cl": "tsx --env-file=.env.local scripts/probe-cl.ts",
+    "probe:el": "tsx --env-file=.env.local scripts/probe-el.ts",
     "backfill": "tsx --env-file=.env.local scripts/backfill.ts",
     "supabase:link": "supabase link --project-ref $SUPABASE_PROJECT_REF",
     "supabase:push": "supabase db push",
@@ -20,6 +21,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
     "@elevenlabs/elevenlabs-js": "^2.45.0",
+    "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.49.0",
     "@tailwindcss/postcss": "^4.2.4",
     "@trigger.dev/sdk": "4.4.5",

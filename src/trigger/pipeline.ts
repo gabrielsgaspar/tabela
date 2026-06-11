@@ -217,7 +217,15 @@ export async function runDailyPipeline(
       leaguesDataOk.push(league);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[${league}] Phase A failed — skipping editorials: ${msg}`);
+      // Structured, greppable partial-failure signal. The run continues with
+      // whatever other competitions succeeded (graceful degradation). WS7 will
+      // turn this line into a `fetch_partial_failure` row in the `event` table;
+      // until that table exists, the log line + `leaguesDataFailed` are the
+      // record. Keep the `[fetch_partial_failure]` prefix stable — alerting and
+      // the future event shim both key off it.
+      console.error(
+        `[fetch_partial_failure] league=${league} date=${date} reason=${msg}`,
+      );
       leaguesDataFailed.push(league);
     }
   }

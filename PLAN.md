@@ -1,103 +1,102 @@
-# PLAN.md — Phase 7: Refocus on Premier League + Champions League
+# PLAN.md — WS1: Accounts and preferences
 
-> Status marker: **All code phases (A–E) complete**. Remaining work is
-> maintainer-owned (secrets, CL backfill, ops) — see "What only the maintainer
-> can do" below.
+> Phase plan for the second workstream of [EXPANSION.md](./EXPANSION.md) (§3).
+> WS0 is complete (see `ROADMAP.md` + `DECISIONS.md` 2026-06-04). Written per
+> `CLAUDE.md` ("start a new phase by writing a `PLAN.md`").
 
 ## Goal
 
-Re-scope Tabela from "the top five European domestic leagues" to a tighter
-product: **the Premier League and the UEFA Champions League** — the English
-top flight plus the premier European competition its clubs compete in.
+Enough identity + stored preference to personalize briefings and attribute
+behavioral events. This unblocks WS2–WS7. Three new tables, Supabase Auth
+(email magic-link), an onboarding flow, and a `getUserContext` helper every
+downstream workstream reads from.
 
-Scope decisions (locked with the maintainer 2026-05-29):
+## Current state (verified this session)
 
-- **Competitions:** Premier League (`PL`) + Champions League (`CL`) only.
-  Europa League / Conference League are deferred — most likely gated behind a
-  paid Football-Data.org tier (to be confirmed in Phase B). Adding them later
-  is a config change once the data plan allows.
-- **The other four domestic leagues** (La Liga, Bundesliga, Serie A, Ligue 1):
-  removed from the app's scope and UI. Their existing rows in Supabase are left
-  in place — no migration, no deletion. Their `/leagues/<slug>` routes will
-  simply 404. No data is destroyed; the change is purely what the app surfaces.
+- Supabase is a **cloud** project (`ksmgtrbgrvqfhiijqsyd.supabase.co`) — the old
+  localhost/Docker blocker (DECISIONS.md 2026-05-29) no longer applies.
+- All WS1 credentials are present in `.env.local`/`.env`: anon key, service-role
+  key, project ref, DB URL.
+- `@supabase/supabase-js` is installed; **`@supabase/ssr` is not** — it's needed
+  for cookie-based session handling in the Next.js App Router.
+- Existing schema: `match_days`, `season_stats`, `editorials`, `match_results`,
+  `teams_followed` (the last is the deferred follow sketch — auth never shipped,
+  so it is empty). Migrations live in `supabase/migrations/`.
+- `src/lib/supabase.ts` exports `createServerClient` (service role, scripts/trigger
+  only) and `createBrowserClient` (anon, RLS). Neither does auth sessions yet.
 
-## Why this is a real phase, not a config edit
+## Decisions (flag-and-record per the EXPANSION.md intro)
 
-A full review on 2026-05-29 surfaced a blocker the docs do not mention: **the
-committed repository does not build.** Nine modules that the web layer imports
-are absent from disk and were never present in any git commit:
+1. **Auth library: `@supabase/ssr` + email magic-link, no passwords** (EXPANSION
+   §3.1). The App Router needs cookie-based sessions across server components,
+   server actions, and middleware; `@supabase/ssr` is the supported way. New
+   dependency → record in `DECISIONS.md` (it's a library of an existing service,
+   not a new paid service).
+2. **`follow` supersedes `teams_followed`, but the old table is not dropped now.**
+   `teams_followed` is referenced by `database.types.ts` and `FollowTeamCTA.tsx`
+   and is empty. Dropping it is a separate cleanup once nothing references it.
+   The migration adds `follow` and leaves `teams_followed` in place with a
+   deprecation comment. No data migration runs automatically (FK to `app_user`
+   would fail for any orphan row); the migration raises a NOTICE if rows exist.
+3. **Account rows are provisioned by the app at onboarding, not by an
+   `auth.users` trigger.** EXPANSION §3.2 step 3 writes `app_user`/`user_prefs`/
+   `follow` from the onboarding UI. A `SECURITY DEFINER` trigger on `auth.users`
+   is more fragile and harder to reason about under RLS; the app path is explicit
+   and testable. (Revisit only if we need rows to exist before onboarding.)
+4. **`getUserContext(db, userId)` takes the client as an argument** rather than
+   constructing one, so the same helper serves both the per-user pipeline fan-out
+   (service-role client, WS3) and the web app (the user's RLS-scoped session).
 
-- `src/lib/leagues.ts` — `LEAGUE_META`, `leagueBySlug` (the league registry)
-- `src/lib/query-types.ts` — `SeasonStatsPayload`, `MatchDayPayload`, `StandingTableEntry`
-- `src/lib/tokens.ts` — the `colors` palette used by `TeamCrest` / `Sparkline`
-- `src/app/SectionHeader.tsx`, `GnGMark.tsx`, `FilterBar.tsx`, `FollowTeamCTA.tsx`
-- `src/app/styleguide/BreakpointBadge.tsx`, `LeagueFilterDemo.tsx`
+## What I will execute now (no new deps, no live-DB writes — all typecheck-clean)
 
-The data, editorial, audio, and Trigger.dev layers are intact and clean. The
-live Vercel site (built from a complete tree before these files were lost)
-still serves real editorial data frozen at 2026-05-04. But locally nothing
-compiles, so no scope change is verifiable until the tree is whole again.
+- **`supabase/migrations/0004_accounts.sql`** — `app_user`, `follow`, `user_prefs`
+  exactly per EXPANSION §3.1, with: owner-only RLS policies (`auth.uid()` = the
+  row's user), `GRANT`s to the `authenticated` role, an `updated_at` trigger on
+  `user_prefs`, and a guarded NOTICE about `teams_followed`.
+- **`src/lib/database.types.ts`** — hand-add the three tables (matching the
+  generated format) so `getUserContext` typechecks before the live regen. Marked
+  with a note to reconcile via `pnpm supabase:gen-types` after the migration applies.
+- **`src/lib/users.ts`** — `getUserContext(db, userId)` returning a typed
+  `UserContext` (timezone, briefing time, follows split into competitions/teams,
+  prefs) with the **cold-start guard**: a user following nothing defaults to all
+  in-scope competitions (`COMPETITIONS`).
+- **`DECISIONS.md`**, **`ROADMAP.md`**, **`TASKS.md`** updates.
+- `tsc --noEmit` + `eslint src/` green.
 
-## Phases
+## Maintainer / terminal-gated (I'll hand these off — you offered to run commands)
 
-### Phase A — Make the repo build again ✓ COMPLETE
-No secrets required; fully reproducible offline.
+1. **Install the auth dep:** `pnpm add @supabase/ssr` (corepack's pnpm 11 trips on
+   build-script approval for me; one `pnpm approve-builds` likely fixes it).
+2. **Apply the migration to the cloud DB.** Either you run `pnpm supabase:push`,
+   or — with your go-ahead — I apply it via the connected Supabase MCP
+   (`apply_migration`). This is a live schema change, so I will **confirm before
+   running it**.
+3. **Enable email magic-link Auth** in the Supabase dashboard (Authentication →
+   Providers → Email → enable magic link; set the site URL + redirect to
+   `NEXT_PUBLIC_APP_URL`). Dashboard-only — your step.
+4. **Regenerate types:** `pnpm supabase:gen-types` (reconciles the hand-added types).
 
-- `pnpm install`.
-- Reconstruct the nine missing modules from their call sites, the
-  `claude_design/` reference, and the live deployed HTML.
-- Recreate `env.example` documenting the required environment variables.
-- **Done when:** `pnpm typecheck`, `pnpm lint`, and `pnpm build` are all green
-  at the *current* five-league scope. Building before changing scope proves the
-  reconstruction is faithful rather than a fresh invention.
+## Next sub-phase (after 1–4 land, so it's verifiable against a running app)
 
-### Phase B — Verify Champions League data ✓ COMPLETE
-Requires `FOOTBALL_DATA_TOKEN` in `.env.local`.
+- Auth client modules using `@supabase/ssr` (server client, browser client,
+  `middleware.ts` for session refresh) — additive to `src/lib/supabase.ts`.
+- Auth pages in `src/app/` (sign-in with magic link, `/auth/callback`, sign-out).
+- Onboarding flow: pick competitions (PL/CL), optionally follow teams, set
+  timezone (auto-detect + editable) and briefing time → writes `app_user` +
+  `follow` + `user_prefs`.
 
-- Probe `/competitions/CL/{matches,standings,scorers}` for a recent date.
-- Confirm CL is on the free tier; capture the league-phase standings shape
-  (single 36-team table vs. groups, presence of a `TOTAL` standings group,
-  matchday semantics, and how knockout stages report).
-- Record findings in `DECISIONS.md`. This determines exactly how the standings
-  table and race-watch render for CL.
+## Acceptance criteria (EXPANSION §3.3)
 
-### Phase C — Scope rewrite to PL + CL ✓ COMPLETE
-Autonomous code change.
+- [ ] `tsc --noEmit` + `eslint src/` pass (this turn's deliverables).
+- [ ] Migration creates the three tables with owner-only RLS (verified on apply).
+- [ ] A new user can sign in, onboard, and get exactly one `app_user` + one
+      `user_prefs` + ≥1 `follow` (verified once auth UI lands).
+- [ ] RLS: user A cannot read user B's `follow`/`user_prefs` (verified on apply).
+- [ ] `getUserContext` returns a typed object; cold-start guard defaults a
+      follow-nothing user to all in-scope competitions.
 
-- `src/lib/football-types.ts`: `LeagueCode = "PL" | "CL"`; `LEAGUES = ["PL", "CL"]`.
-- `src/editorial/types.ts` `LEAGUE_NAMES` and `src/lib/leagues.ts` `LEAGUE_META`:
-  Premier League + UEFA Champions League (slug `champions-league`).
-- `src/editorial/prompts.ts`: genericize "top five European leagues" /
-  "cross-league overview" wording to the new scope. **VOICE.md rules unchanged.**
-- `src/app/leagues/[slug]/FullStandingsTable.tsx`: add CL league-phase zone
-  rules (1–8 qualify, 9–24 knockout play-off, 25–36 eliminated) and degrade
-  gracefully to a results-only view when no standings table exists (knockouts).
-  Update the zone legend.
-- Home page + `layout.tsx`: replace "five leagues" copy and metadata.
-- The four domestic leagues fall out of scope automatically once removed from
-  `LEAGUES` / `LEAGUE_META` / `LEAGUE_NAMES`.
+## Out of scope for WS1
 
-### Phase D — Backfill + generate CL content ✓ COMPLETE (code) · run is maintainer-owned
-Requires `FOOTBALL_DATA_TOKEN`, Supabase service key, Anthropic key.
-
-- Adapt `scripts/historical-backfill.ts` / `scripts/run-once.ts` for CL.
-- Populate `match_results` (team history) and generate editorials for recent
-  CL dates so the live site has content under the new scope.
-
-### Phase E — Verify, document, ship ✓ COMPLETE
-
-- Re-run typecheck / lint / build; run the dev server and visually verify the
-  PL and CL pages; confirm `/leagues/champions-league` returns 200.
-- Update `README.md`, `ROADMAP.md`, `DATA.md`; append a `DECISIONS.md` entry
-  for the re-scope.
-- Going-live ops (paid ElevenLabs tier, Trigger.dev redeploy/unpause, Vercel
-  deploy) remain maintainer-owned and are out of scope for the code work.
-
-## What only the maintainer can do
-
-The code work above is fully autonomous. These steps need credentials/spend
-and are flagged, not automated:
-
-- Provide secrets in `.env.local` so Phases B and D can run.
-- Paid ElevenLabs tier (production audio), Trigger.dev dashboard
-  (env vars + unpausing the daily schedule), and the Vercel deploy.
+Spoiler layer (WS2), briefings (WS3+), the `event`/`metrics_daily` tables, and
+the transparency/consent surfaces (WS6). Auth UI is the next sub-phase, not this
+turn's executable slice.

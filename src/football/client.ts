@@ -76,6 +76,29 @@ export async function getMatches(
 }
 
 /**
+ * Fetch upcoming (not-yet-played) matches for a league across a date range.
+ * Filters server-side to `SCHEDULED` + `TIMED` so the response carries only
+ * fixtures still to come. Used by the WS4 "what's worth watching" preview.
+ *
+ * The response is the same `MatchesResponse` shape as `getMatches`; upcoming
+ * matches simply have null `score.fullTime` values.
+ *
+ * @param league    A supported league code (PL or CL).
+ * @param dateFrom  YYYY-MM-DD (UTC), inclusive.
+ * @param dateTo    YYYY-MM-DD (UTC), inclusive.
+ */
+export async function getUpcomingMatches(
+  league: LeagueCode,
+  dateFrom: string,
+  dateTo: string,
+): Promise<MatchesResponse> {
+  return apiFetch<MatchesResponse>(
+    `/competitions/${league}/matches?dateFrom=${dateFrom}&dateTo=${dateTo}` +
+      `&status=SCHEDULED,TIMED`,
+  );
+}
+
+/**
  * Fetch the current season top scorers for a league (free tier: goals + assists).
  * @param league  A supported league code (PL or CL).
  * @param limit   How many scorers to return. Default 20 (API max on free tier).

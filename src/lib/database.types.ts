@@ -19,6 +19,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_user: {
+        Row: {
+          briefing_local_time: string
+          created_at: string
+          id: string
+          onboarded_at: string | null
+          timezone: string
+        }
+        Insert: {
+          briefing_local_time?: string
+          created_at?: string
+          id: string
+          onboarded_at?: string | null
+          timezone?: string
+        }
+        Update: {
+          briefing_local_time?: string
+          created_at?: string
+          id?: string
+          onboarded_at?: string | null
+          timezone?: string
+        }
+        Relationships: []
+      }
       editorials: {
         Row: {
           audio_url: string | null
@@ -54,6 +78,35 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      follow: {
+        Row: {
+          created_at: string
+          kind: string
+          ref: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          kind: string
+          ref: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          kind?: string
+          ref?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_user"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       match_days: {
         Row: {
@@ -181,6 +234,41 @@ export type Database = {
         }
         Relationships: []
       }
+      user_prefs: {
+        Row: {
+          analytics_consent: boolean
+          notif_daily: boolean
+          notif_match_alerts: boolean
+          spoiler_mode: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analytics_consent?: boolean
+          notif_daily?: boolean
+          notif_match_alerts?: boolean
+          spoiler_mode?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analytics_consent?: boolean
+          notif_daily?: boolean
+          notif_match_alerts?: boolean
+          spoiler_mode?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_prefs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "app_user"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -222,13 +310,13 @@ export type Tables<
     : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
         DefaultSchema["Views"])
-  ? (DefaultSchema["Tables"] &
-      DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-      Row: infer R
-    }
-    ? R
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
     : never
-  : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
@@ -248,12 +336,12 @@ export type TablesInsert<
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-      Insert: infer I
-    }
-    ? I
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
     : never
-  : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
@@ -273,12 +361,12 @@ export type TablesUpdate<
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-      Update: infer U
-    }
-    ? U
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
     : never
-  : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
@@ -294,8 +382,8 @@ export type Enums<
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-  : never
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
@@ -311,8 +399,8 @@ export type CompositeTypes<
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-  : never
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
 
 export const Constants = {
   public: {
